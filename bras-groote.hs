@@ -1,4 +1,5 @@
 -- mashup of Brasoveanu 2011 with de Groote 2007
+import Debug.Trace
 
 type Ent = Char
 type Stack = [Ent]
@@ -38,16 +39,17 @@ enjoy  n m is k = (and (map (\i -> elem ((i!!n), (i!!m)) [(c,a),(c,b)]) is)) && 
 conj :: Prop -> Prop -> Prop  -- after de Groote p. 3, (3) 
 conj left right is k = left is (\is' -> right is' k)
 
--- for index [i1, i2, ..., in], return exists x1, x2, ..., xn such
--- that [i1^{x1/n}, i2^{x2/n}, ..., in^{xn/n}] satisfies res n; scope n
+every n res scope is k = 
+  let fn x y = concat (map (\i -> [insert n x i, insert n y i]) is) in
+    (and [conj (res n) (scope n) (fn x y) trivial
+           | x <- domain, y <- domain, x /= y, res n (fn x y) trivial])
+    && (k is)
+
+-- given stackset [i1, i2, ..., im], test whether there exist x1, x2, ..., xm
+--   such that [i1^{x1/n}, i2^{x2/n}, ..., in^{xm/m}] satisfies res n; scope n
 indef n res scope is k =
   or [conj (res n) (scope n) is' k 
        | is' <- foldr (\i -> \jss -> [(insert n x i):js | x <- domain, js <- jss]) [[]] is]
-
-every n res scope (i:is) k = 
-  (and [conj (res n) (scope n) ((insert n x i):(insert n y i):is) trivial
-         | x <- domain, y <- domain, x /= y, res n ((insert n x i):(insert n y i):is) trivial])
-  && (k is)
 
 different :: Int -> (Int -> Prop) -> Int -> Prop
 different index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) /= ((is!!index)!!m) && (k is))
@@ -67,3 +69,31 @@ different index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) /= ((is!!index)!
 -- Every boy enjoyed a (different) poem:
 -- eval((every 0 boy) (\x -> (indef 1 poem) (\y -> enjoy y x))) == True
 -- eval((every 0 boy) (\x -> (indef 1 (different 1 poem)) (\y -> enjoy y x))) == False
+
+-- Throws a runtime error, since "different" requires more than one stack on the stackset:
+-- eval(john (\x -> (indef 1 (different 1 poem)) (\y -> enjoy y x)))
+
+girl n is k = (and (map (\i -> elem (i!!n) [e,f]) is)) && (k is)
+give n m l is k = (and (map (\i -> elem ((i!!n), (i!!m), (i!!l))
+                                        [(f,c,a),(e,d,b),(f,c,b),(e,d,a)])
+                            is)) && (k is)
+give' n m l is k = (and (map (\i -> elem ((i!!n), (i!!m), (i!!l))
+                                        [(f,c,a),(e,c,b),(f,d,b),(e,d,a)])
+                            is)) && (k is)
+
+-- Ambiguous: Every boy gave/showed every girl a different poem
+-- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 poem) (\m -> give n m l)))) == True
+-- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 3 poem)) (\m -> give n m l)))) == True
+-- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 2 poem)) (\m -> give n m l)))) == False
+-- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 poem) (\m -> give' n m l)))) == True
+-- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 3 poem)) (\m -> give' n m l)))) == False
+-- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 2 poem)) (\m -> give' n m l)))) == True
+
+same :: Int -> (Int -> Prop) -> Int -> Prop
+same index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) == ((is!!index)!!m) && (k is))
+
+-- Every boy recited a same poem:
+-- eval((every 0 boy) (\x -> (indef 1 (same 1 poem)) (\y -> recite y x))) == False
+
+-- Every boy enjoyed a same poem:
+-- eval((every 0 boy) (\x -> (indef 1 (same 1 poem)) (\y -> enjoy y x))) == True
