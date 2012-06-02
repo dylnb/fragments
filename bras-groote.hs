@@ -51,8 +51,15 @@ indef n res scope is k =
   or [conj (res n) (scope n) is' k 
        | is' <- foldr (\i -> \jss -> [(insert n x i):js | x <- domain, js <- jss]) [[]] is]
 
+-- different :: Int -> (Int -> Prop) -> Int -> Prop
+-- different index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) /= ((is!!index)!!m) && (k is))
+
 different :: Int -> (Int -> Prop) -> Int -> Prop
-different index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) /= ((is!!index)!!m) && (k is))
+different ind nom m = let
+  neqs is =
+    [((is!!c)!!m) /= ((is!!d)!!m)
+      | c <- [0..length is - 1], d <- [0..length is - 1], ((is!!c)!!ind) /= ((is!!d)!!ind)] in
+  conj (nom m) (\is -> \k -> and (neqs is) && (k is)) 
 
 -- eval (john entered) == True
 -- he 0 sat [[a,b]] trivial == True
