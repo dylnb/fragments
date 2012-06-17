@@ -71,7 +71,7 @@ ar_eet r g y i k = g (\x -> r x y) i k
 conj :: Prop -> Prop -> Prop --after de Groote p. 3, (3) 
 conj left right i k = left i (\i' -> right i' k)
 
-un :: Prop -> Prop
+un :: Prop -> Prop --VP negation
 un s i k = not (s i k) && (k i)
 
 -- sum-forming "and"
@@ -145,17 +145,21 @@ laugh, smoke :: Ent -> Prop
 [laugh, smoke] = map (ast . cont_et) [laugh', smoke']
 
 -- basic transitives
-want', receive' :: Ent -> Ent -> Bool
+want', want2', receive' :: Ent -> Ent -> Bool
 
 want' x s@(Atom y) = elem (x,s) [(d,a), (d,b), (d,c)]
 want' x   (Plur y) = and (map (\z -> elem (x,z) [(d,a), (d,b), (d,c)]) y)
+
+want2' x s@(Atom y) = elem (x,s) [(d,a), (d,b), (d,c), (e,a), (e,b), (e,c)]
+want2' x   (Plur y) = and (map (\z -> elem (x,z) [(d,a), (d,b), (d,c), (e,a),
+  (e,b), (e,c)]) y)
 
 receive' x s@(Atom y) = elem (x,s) [(d,a), (e,b), (f,c)]
 receive' x   (Plur y) = and (map (\z -> elem (x,z) [(d,a), (e,b), (f,c)]) y)
 
 -- continuized transitives
-want, receive :: Ent -> Ent -> Prop
-[want, receive] = map cont_eet [want', receive']
+want, want2, receive :: Ent -> Ent -> Prop
+[want, want2, receive] = map cont_eet [want', want2', receive']
 
 -- quantifiers, articles
 every :: (Ent -> Prop) -> GQ
@@ -170,6 +174,8 @@ no :: (Ent -> Prop) -> GQ
 no res scope i k =
   and [not (res x i (\i' -> scope x (x:i') trivial)) | x <- domain] && (k i)
 
+-- "the" is like "every" except that it doesn't throw anything other than what
+-- it is quantifying over onto the stack; uniqueness presuppositions absent here
 the :: (Ent -> Prop) -> GQ
 the res = cont_e (top res)
 {-
@@ -194,68 +200,120 @@ different dp verb x i k =
         | u <- atoms, v <- (filter (\(Plur x) -> notElem u x) plurs) ++ (delete u atoms),
           elem u (get_pl i), fn v (get_pl i)] && (k i)
 
-{- 
-different :: Int -> (Int -> Prop) -> Int -> Prop
-different index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) /= ((is!!index)!!m) && (k is))
 
--- butfor is like the g[x]h operation in DPL and CDRT; it checks that stacks
---   i and j agree on every column except possibly the ones in ns
-butfor :: [Int] -> Stack -> Stack -> Bool
-butfor ns i j = 
- and [(i!!x) == (j!!x) | x <- filter (\y -> notElem y ns) [0..length i - 1]]
+-- Basic Examples
 
--- "diff" is another implementation option for different. the index on "diff" is
---   just the index of its associated distributor. it guarantees that if rows 
---   i and j agree on everything except possibly column n, then they differ on column n
-diff :: Int -> (Int -> Prop) -> Int -> Prop
-diff ind nom m =
- conj (nom m) (\is -> \k -> and [(i!!m) /= (j!!m)
-       | i <- is, j <- is, i /= j, (butfor [ind,m] i j)] && (k is))
--}
+-- eval (alex laugh) == True
+-- he 0 laugh [a,b] trivial == True
+-- he 1 smoke [a,b] trivial == False
+-- eval ((alex laugh) `conj` (he 0 smoke)) == True
+-- eval (some student laugh) == True
+-- eval (every student laugh) == True
+-- eval (every student smoke) == False
 
--- eval (john entered) == True
--- he 0 sat [[a,b]] trivial == True
--- he 1 sat [[a,d],[d,b]] trivial == False
--- eval ((john entered) `conj` (he 0 sat)) == True
--- eval (indef 0 boy sat) == True
--- eval(every 0 boy entered) == True
--- eval(every 0 boy sat) == False
+-- "Every student V-ed the (same) book":
+-- eval (every student (\m -> the book (\n -> want n m))) == False
+-- eval (every student (\m -> the book (\n -> receive n m))) == False
+-- eval (every student (same (\f -> the (f book)) (\m n -> want m n))) == True
+-- eval (every student (same (\f -> the (f book)) (\m n -> receive m n))) ==
+--   False
 
--- Every boy read a (different) poem:
--- eval((every 0 boy) (\x -> (indef 1 poem) (\y -> recite y x))) == True
--- eval((every 0 boy) (\x -> (indef 1 (different 1 poem)) (\y -> recite y x))) == True
+-- "Every student V-ed a (different) book":
+-- eval (every student (\m -> some book (\n -> want n m))) == True
+-- eval (every student (\m -> some book (\n -> receive n m))) == True
+-- eval (every student (different (\f -> some (f book)) (\m n -> want m n))) ==
+--   False
+-- eval (every student (different (\f -> some (f book)) (\m n -> receive m n)))
+--   == True
 
--- Every boy enjoyed a (different) poem:
--- eval((every 0 boy) (\x -> (indef 1 poem) (\y -> enjoy y x))) == True
--- eval((every 0 boy) (\x -> (indef 1 (different 1 poem)) (\y -> enjoy y x))) == False
+-- Throws a runtime error, since stack must have either a sum-individual or two
+-- atomic individuals to distribute over
+-- eval (alex (different (\f -> some (f book)) (\m n -> receive m n)))
+-- eval (alex (same (\f -> the (f book)) (\m n -> receive m n)))
+-- eval (some student (different (\f -> some (f book)) (\m n -> receive m n)))
+-- eval (some student (same (\f -> the (f book)) (\m n -> receive m n)))
 
--- Throws a runtime error, since "different" requires more than one stack on the stackset:
--- eval(john (\x -> (indef 1 (different 1 poem)) (\y -> enjoy y x)))
 
-{-
-girl n is k = (and (map (\i -> elem (i!!n) [e,f]) is)) && (k is)
-give n m l is k = (and (map (\i -> elem ((i!!n), (i!!m), (i!!l))
-                                        [(f,c,a),(e,d,b),(f,c,b),(e,d,a)])
-                            is)) && (k is)
-give' n m l is k = (and (map (\i -> elem ((i!!n), (i!!m), (i!!l))
-                                        [(f,c,a),(e,c,b),(f,d,b),(e,d,a)])
-                            is)) && (k is)
-give'' n m l is k = (and (map (\i -> elem ((i!!n), (i!!m), (i!!l))
-                                        [(f,c,a),(e,c,a),(f,d,b),(e,d,b)])
-                            is)) && (k is)
--}
+-- Plurals
+--
+-- eval (the (pl student) (\m -> want dubliners m)) == True
+-- eval (the (pl student) (same (\f -> the (f book)) (\m n -> want m n))) ==
+--   True
+-- eval (the (pl student) (same (\f -> the (f book)) (\m n -> receive m n))) ==
+--   False
+-- eval (oplus [a,b] (same (\f -> the (f book)) (\m n -> want m n))) == True
+-- eval (oplus [a,b] (same (\f -> the (f book)) (\m n -> receive m n))) == False
+--
+--
+-- No apparatus for bare plurals yet, but if we pretend that plurals can license
+-- singular "different"...
+--
+-- eval (the (pl student) (different (\f -> some (f book)) (\m n -> want m n)))
+--   == False
+-- eval (the (pl student) (different (\f -> some (f book)) (\m n -> receive m
+--   n))) == True
+-- eval (oplus [a,b] (different (\f -> some (f book)) (\m n -> want m n))) ==
+--   False
+-- eval (oplus [a,b] (different (\f -> some (f book)) (\m n -> receive m n))) ==
+--   True
 
--- Ambiguous: Every boy gave/showed every girl a different poem
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 poem) (\m -> give n m l)))) == True
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 3 poem)) (\m -> give n m l)))) == True
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 2 poem)) (\m -> give n m l)))) == False
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 poem) (\m -> give' n m l)))) == True
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 3 poem)) (\m -> give' n m l)))) == False
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 2 poem)) (\m -> give' n m l)))) == True
--- eval ((every 0 boy) (\l -> (every 1 girl) (\n -> (indef 2 (different 3 poem)) (\m -> give'' n m l)))) == False
 
--- Every boy recited a same poem:
--- eval((every 0 boy) (\x -> (indef 1 (same 1 poem)) (\y -> recite y x))) == False
+-- "No student(s) V-ed the (same) book":
+--
+-- eval (no student (\m -> some book (\n -> want n m))) == False
+-- eval (no student (\m -> some book (\n -> receive n m))) == False
+--
+-- Throws a runtime error (though marginally grammatical)
+-- eval (no student (same (\f -> the (f book)) (\m n -> want m n)))
+-- eval (no student (different (\f -> some (f book)) (\m n -> want m n)))
+--
+-- eval (no (pl student) (same (\f -> the (f book)) (\m n -> want m n))) ==
+--   False
+-- eval (no (pl student) (same (\f -> the (f book)) (\m n -> receive m n))) ==
+--   True
+-- eval (no (pl student) (different (\f -> some (f book)) (\m n -> want m n)))
+--   == True
+-- eval (no (pl student) (different (\f -> some (f book)) (\m n -> receive m
+--   n))) == False
 
--- Every boy enjoyed a same poem:
--- eval((every 0 boy) (\x -> (indef 1 (same 1 poem)) (\y -> enjoy y x))) == True
+
+-- Partitives
+--
+-- Have to use "ast" instead of "pl" for the plural partitive object, again
+-- becuase there's no apparatus for bare plurals
+--
+-- eval (some (of_p (the (pl student))) smoke) == True
+-- eval (alex (\m -> some (of_p (the (ast book))) (\n -> want n m))) == True
+--
+--"Alex and Bill / The students / Every student V-ed some of the same books":
+-- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
+--   want m n))) == True
+-- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
+--   receive m n))) == False
+-- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book))))) (\m n
+--   -> want m n))) == True
+-- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book))))) (\m n
+--   -> receive m n))) == False
+-- eval (every student (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
+--   want m n))) == True
+-- eval (every student (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
+--   receive m n))) == False
+--
+-- "Alex and Bill / etc. V-ed none of the same books":
+-- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) (\m n -> want
+--   m n))) == False
+-- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
+--   receive m n))) == True
+-- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
+--   want m n))) == False
+-- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
+--   receive m n))) == True
+-- eval (every student (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
+--   want m n))) == False
+-- eval (every student (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
+--   receive m n))) == True
+
+
+-- Problem Sentences
+-- eval (no (pl student) (\m -> some book (\n -> want n m))) == False
+-- eval (no (pl student) (\m -> some book (\n -> receive n m))) == True
