@@ -212,22 +212,24 @@ different dp verb x i k =
 -- eval (every student smoke) == False
 
 -- "Every student V-ed the (same) book":
+--
 -- eval (every student (\m -> the book (\n -> want n m))) == False
 -- eval (every student (\m -> the book (\n -> receive n m))) == False
 -- eval (every student (same (\f -> the (f book)) (\m n -> want m n))) == True
--- eval (every student (same (\f -> the (f book)) (\m n -> receive m n))) ==
---   False
+-- eval (every student (same (\f -> the (f book)) 
+--        (\m n -> receive m n))) == False
 
 -- "Every student V-ed a (different) book":
+--
 -- eval (every student (\m -> some book (\n -> want n m))) == True
 -- eval (every student (\m -> some book (\n -> receive n m))) == True
--- eval (every student (different (\f -> some (f book)) (\m n -> want m n))) ==
---   False
--- eval (every student (different (\f -> some (f book)) (\m n -> receive m n)))
---   == True
+-- eval (every student (different (\f -> some (f book)) 
+--        (\m n -> want m n))) == False
+-- eval (every student (different (\f -> some (f book)) 
+--        (\m n -> receive m n))) == True
 
 -- Throws a runtime error, since stack must have either a sum-individual or two
--- atomic individuals to distribute over
+--   atomic individuals to distribute over
 -- eval (alex (different (\f -> some (f book)) (\m n -> receive m n)))
 -- eval (alex (same (\f -> the (f book)) (\m n -> receive m n)))
 -- eval (some student (different (\f -> some (f book)) (\m n -> receive m n)))
@@ -235,83 +237,104 @@ different dp verb x i k =
 
 
 -- Plurals
---
+
 -- eval (the (pl student) (\m -> want dubliners m)) == True
--- eval (the (pl student) (same (\f -> the (f book)) (\m n -> want m n))) ==
---   True
--- eval (the (pl student) (same (\f -> the (f book)) (\m n -> receive m n))) ==
---   False
+-- eval (the (pl student) (same (\f -> the (f book)) 
+--        (\m n -> want m n))) == True
+-- eval (the (pl student) (same (\f -> the (f book)) 
+--        (\m n -> receive m n))) == False
 -- eval (oplus [a,b] (same (\f -> the (f book)) (\m n -> want m n))) == True
 -- eval (oplus [a,b] (same (\f -> the (f book)) (\m n -> receive m n))) == False
---
---
--- No apparatus for bare plurals yet, but if we pretend that plurals can license
--- singular "different"...
---
--- eval (the (pl student) (different (\f -> some (f book)) (\m n -> want m n)))
---   == False
--- eval (the (pl student) (different (\f -> some (f book)) (\m n -> receive m
---   n))) == True
--- eval (oplus [a,b] (different (\f -> some (f book)) (\m n -> want m n))) ==
---   False
--- eval (oplus [a,b] (different (\f -> some (f book)) (\m n -> receive m n))) ==
---   True
 
+-- No apparatus for bare plurals yet, but if we pretend that plurals can license
+--   singular "different"...
+
+-- eval (the (pl student) (different (\f -> some (f book)) 
+--        (\m n -> want m n))) == False
+-- eval (the (pl student) (different (\f -> some (f book)) 
+--        (\m n -> receive m n))) == True
+-- eval (oplus [a,b] (different (\f -> some (f book)) 
+--        (\m n -> want m n))) == False
+-- eval (oplus [a,b] (different (\f -> some (f book)) 
+--        (\m n -> receive m n))) == True
 
 -- "No student(s) V-ed the (same) book":
 --
 -- eval (no student (\m -> some book (\n -> want n m))) == False
 -- eval (no student (\m -> some book (\n -> receive n m))) == False
---
+
 -- Throws a runtime error (though marginally grammatical)
 -- eval (no student (same (\f -> the (f book)) (\m n -> want m n)))
 -- eval (no student (different (\f -> some (f book)) (\m n -> want m n)))
---
--- eval (no (pl student) (same (\f -> the (f book)) (\m n -> want m n))) ==
---   False
--- eval (no (pl student) (same (\f -> the (f book)) (\m n -> receive m n))) ==
---   True
--- eval (no (pl student) (different (\f -> some (f book)) (\m n -> want m n)))
---   == True
--- eval (no (pl student) (different (\f -> some (f book)) (\m n -> receive m
---   n))) == False
+
+-- eval (no (pl student) (same (\f -> the (f book)) 
+--        (\m n -> want m n))) == False
+-- eval (no (pl student) (same (\f -> the (f book)) 
+--        (\m n -> receive m n))) == True
+-- eval (no (pl student) (different (\f -> some (f book)) 
+--        (\m n -> want m n))) == True
+-- eval (no (pl student) (different (\f -> some (f book)) 
+--        (\m n -> receive m n))) == False
 
 
 -- Partitives
---
+
 -- Have to use "ast" instead of "pl" for the plural partitive object, again
--- becuase there's no apparatus for bare plurals
---
+--   becuase there's no apparatus for bare plurals
+
 -- eval (some (of_p (the (pl student))) smoke) == True
 -- eval (alex (\m -> some (of_p (the (ast book))) (\n -> want n m))) == True
---
+
 --"Alex and Bill / The students / Every student V-ed some of the same books":
--- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
---   want m n))) == True
--- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
---   receive m n))) == False
--- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book))))) (\m n
---   -> want m n))) == True
--- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book))))) (\m n
---   -> receive m n))) == False
--- eval (every student (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
---   want m n))) == True
--- eval (every student (same (\f -> some (of_p (the (f (ast book))))) (\m n ->
---   receive m n))) == False
 --
+-- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) 
+--        (\m n -> want m n))) == True
+-- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) 
+--        (\m n -> receive m n))) == False
+-- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book)))))
+--        (\m n -> want m n))) == True
+-- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book))))) 
+--        (\m n -> receive m n))) == False
+-- eval (every student (same (\f -> some (of_p (the (f (ast book))))) 
+--        (\m n -> want m n))) == True
+-- eval (every student (same (\f -> some (of_p (the (f (ast book))))) 
+--        (\m n -> receive m n))) == False
+
 -- "Alex and Bill / etc. V-ed none of the same books":
--- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) (\m n -> want
---   m n))) == False
--- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
---   receive m n))) == True
--- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
---   want m n))) == False
--- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
---   receive m n))) == True
--- eval (every student (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
---   want m n))) == False
--- eval (every student (same (\f -> no (of_p (the (f (ast book))))) (\m n ->
---   receive m n))) == True
+--
+-- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) 
+--        (\m n -> want m n))) == False
+-- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) 
+--        (\m n -> receive m n))) == True
+-- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) 
+--        (\m n -> want m n))) == False
+-- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) 
+--        (\m n -> receive m n))) == True
+-- eval (every student (same (\f -> no (of_p (the (f (ast book))))) 
+--        (\m n -> want m n))) == False
+-- eval (every student (same (\f -> no (of_p (the (f (ast book))))) 
+--        (\m n -> receive m n))) == True
+
+
+-- External Readings
+
+-- eval (conj (alex (want dubliners))
+--            (bill (same (\f -> the (f book)) (\m n -> want m n)))) == True
+-- eval (conj (alex (want dubliners))
+--            (bill (same (\f -> the (f book)) (\m n -> receive m n)))) == False
+-- eval (conj (alex (want dubliners))
+--            (bill (different (\f -> some (f book)) (\m -> want m n)))) == False
+-- eval (conj (alex (want dubliners))
+--            (bill (different (\f -> some (f book)) (\m -> want m n)))) == True
+
+-- "Alex V-ed Dubliners. No other student V-ed the same book":
+--
+-- eval (conj (alex (receive dubliners))
+--            (no (cont_et (\y -> elem y [b,c])) (same (\f -> the (f book))
+--              (\m n -> receive m n)))) == True
+-- eval (conj (alex (receive dubliners))
+--            (no (cont_et (\y -> elem y [b,c])) (same (\f -> the (f book))
+--              (\m n -> want m n)))) == False
 
 
 -- Problem Sentences
