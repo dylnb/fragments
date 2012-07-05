@@ -1,4 +1,7 @@
--- mashup of Barker's 2007 parasitic "same" with de Groote's 2007 continuations
+{-# LANGUAGE TypeFamilies, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+
+-- parasitic, anaphoric "same" with de Groote continuations
 
 import Debug.Trace
 import Data.List
@@ -6,23 +9,35 @@ import Data.Maybe
 
 data Ent = Atom Char
          | Plur [Ent] deriving (Eq,Show)
+
 type Stack = [Ent]
 type Continuation = Stack -> Bool
 type Prop = Stack -> Continuation -> Bool
 type GQ = (Ent -> Prop) -> Prop
+type Adj = (Ent -> Prop) -> Ent -> Prop
 
-showPr :: (Ent -> Prop) -> String
-showPr p = show (filter (eval . p) domain)
 
-showGQ :: GQ -> String
-showGQ g = show (map (\h -> [z | z <- atoms, eval (h z)]) funcs)
-  where fn s@(Atom y) = (\x i k -> x == s)
-        fn   (Plur y) = (\x i k -> elem x y)
-        funcs = filter (eval . g . ast) (map fn domain)
- 
-ins :: Int -> Ent -> Stack -> Stack
-ins 0 x i = x:i
-ins n x (a:i) = a:(ins (n - 1) x i)
+-- Print functions and convenience definitions
+-- ======================================== 
+
+trivial :: Continuation
+trivial i = True
+
+eval :: Prop -> Bool
+eval s = s [] trivial
+
+instance Show (Ent -> Prop) where
+  show p = show (filter (eval . p) domain)
+
+instance Show ((Ent -> Prop) -> Prop) where
+  show g = show (map (\h -> [z | z <- atoms, eval (h z)]) funcs)
+    where fn s@(Atom y) = (\x i k -> x == s)
+          fn   (Plur y) = (\x i k -> elem x y)
+          funcs = filter (eval . g . ast) (map fn domain)
+
+
+-- Populate the domain
+-- ======================================== 
 
 [a,b,c,d,e,f,g,h] = map Atom "abcdefgh"
 atoms = [a,b,c,d,e,f,g,h]
@@ -31,11 +46,11 @@ plurs = map Plur (filter (\x -> length x > 1) (subsequences atoms))
  
 domain = atoms ++ plurs
 
-makePlurs :: [Ent] -> [Ent]
-makePlurs []              = []
-makePlurs (x@(Atom i):is) = (Plur [x]):(makePlurs is)
-makePlurs (x@(Plur i):is) = x:(makePlurs is)
 
+-- Basic operations on individuals
+-- ======================================== 
+
+-- fuse a list of individuals into one (possibly) plural individual
 join :: [Ent] -> Ent
 join is | length ls > 1   = Plur ls
         | otherwise       = head ls
@@ -44,50 +59,7 @@ join is | length ls > 1   = Plur ls
         simpleAdd (x@(Plur i):is) = i ++ (simpleAdd is)
         ls = (nub . simpleAdd) is 
 
-trivial :: Continuation
-trivial i = True
-
-eval :: Prop -> Bool
-eval s = s [] trivial
-
--- continuization operators
-cont_e :: Ent -> GQ
-cont_e x p i k = p x (x:i) k
-
-cont_et :: (Ent -> Bool) -> (Ent -> Prop)
-cont_et p x i k = p x && (k i)
-
-cont_eet :: (Ent -> Ent -> Bool) -> (Ent -> Ent -> Prop)
-cont_eet r x y i k = r x y && (k i)
-
--- type lifters
-ar_et :: (Ent -> Prop) -> GQ -> Prop
-ar_et p g i k = g p i k
-
-ar_eet :: (Ent -> Ent -> Prop) -> GQ -> Ent -> Prop
-ar_eet r g y i k = g (\x -> r x y) i k
-
--- dynamic connectives
-conj :: Prop -> Prop -> Prop --after de Groote p. 3, (3) 
-conj left right i k = left i (\i' -> right i' k)
-
-un :: Prop -> Prop --VP negation
-un s i k = not (s i k) && (k i)
-
--- sum-forming "and"
-oplus :: [Ent] -> GQ
-oplus xs = cont_e (join xs)
--- oplus xs p i k = (foldr conj (\i' k' -> True) (map p xs)) (Plur xs:i) k
-
--- partitive "of"; returns the set of individuals at the bottom of the GQ
--- lattice (returns the empty set if the GQ is not an ultrafilter)
-of_p :: GQ -> Ent -> Prop
-of_p g y i k = and (map (\h -> eval (h y)) funcs) && (k i)
-  where fn s@(Atom y) = (\x i k -> x == s)
-        fn   (Plur y) = (\x i k -> elem x y)
-        funcs = filter (eval . g . ast) (map fn domain)
-
--- Link's maximal sum individual
+-- Link's maximal individual
 top :: (Ent -> Prop) -> Ent
 top p = join (filter (eval . p) domain)
 
@@ -101,15 +73,89 @@ pl :: (Ent -> Prop) -> Ent -> Prop
 pl p   (Atom y) i k = False
 pl p s@(Plur y) i k = ast p s i k
 
--- projection operator
-get_pl :: Stack -> [Ent]
-get_pl is | isNothing (first_pl is)     = [is!!0, is!!1]
-          | otherwise                   = fromJust (first_pl is)
 
+-- Basic operations on stacks
+-- ======================================== 
+
+-- insert an indvidual to a position in a stack
+ins :: Int -> Ent -> Stack -> Stack
+ins 0 x i = x:i
+ins n x (a:i) = a:(ins (n - 1) x i)
+
+-- find the first plural on a stack (if there is one)
 first_pl :: Stack -> Maybe [Ent]
 first_pl []            = Nothing
 first_pl ((Plur i):is) = Just i
 first_pl ((Atom i):is) = first_pl is
+
+-- return the first plural on a stack; if there isn't one, then return the
+--   first two atoms as if they were a plural
+get_pl :: Stack -> [Ent]
+get_pl is | isNothing (first_pl is)     = [is!!0, is!!1]
+          | otherwise                   = fromJust (first_pl is)
+
+
+-- Type shenanigans and dynamics
+-- ======================================== 
+
+-- Argument Raising operator: arg_raise
+type family Lift (a :: *)
+type instance Lift (a -> b) = Lift a -> b
+type instance Lift Ent      = GQ
+
+class Lifts a where
+  arg_raise :: a -> Lift a
+
+instance Lifts Ent where
+  arg_raise x = \p i k -> p x (x:i) k
+instance Lifts (Ent -> Prop) where
+  arg_raise p = \g i k -> g p i k
+instance Lifts (Ent -> Ent -> Prop) where
+  arg_raise r = \g y i k -> g (\x -> r x y) i k
+
+-- continuizing operator: dynam
+type family Dynamic (a :: *)
+type instance Dynamic (a -> b) = Dynamic a -> Dynamic b
+type instance Dynamic Ent      = Ent
+type instance Dynamic Bool     = Stack -> (Stack -> Bool) -> Bool
+
+class Dynamics a where
+  dynam :: (Stack -> a) -> Dynamic a
+
+instance Dynamics Bool where
+  dynam f = \i k -> f i && k i
+instance (Dynamics a) => Dynamics (Ent -> a) where
+  dynam f = \x -> dynam (\e -> (f e) x)
+
+
+-- Interpretating English
+-- ======================================== 
+
+-- Connectives
+-- ---------------------------------------- 
+
+-- dynamic conjunction (sentential "and")
+conj :: Prop -> Prop -> Prop --after de Groote p. 3, (3) 
+conj left right i k = left i (\i' -> right i' k)
+
+-- sum-forming "and", as in "John and Bill went home"
+oplus :: [Ent] -> GQ
+oplus xs = arg_raise (join xs)
+
+-- static VP negation
+un :: Prop -> Prop 
+un s i k = not (s i k) && (k i)
+
+-- partitive "of"; returns the set of individuals at the bottom of the GQ
+--   lattice (returns the empty set if the GQ is not an ultrafilter)
+of_p :: GQ -> Ent -> Prop
+of_p g y i k = and (map (\h -> eval (h y)) funcs) && (k i)
+  where fn s@(Atom y) = (\x i k -> x == s)
+        fn   (Plur y) = (\x i k -> elem x y)
+        funcs = filter (eval . g . ast) (map fn domain)
+
+-- Nouns
+-- ---------------------------------------- 
 
 -- names
 alex', bill', chris', dubliners' :: Ent
@@ -117,7 +163,7 @@ alex', bill', chris', dubliners' :: Ent
 
 --continuized names, pronouns
 alex, bill, chris :: GQ
-[alex, bill, chris] = map cont_e [alex', bill', chris']
+[alex, bill, chris] = map arg_raise [alex', bill', chris']
 
 dubliners :: Ent
 dubliners = dubliners'
@@ -133,7 +179,10 @@ book' y    = elem y [d,e,f]
 
 -- continuized nominals
 student, book :: Ent -> Prop
-[student, book] = map cont_et [student', book']
+[student, book] = map (dynam . (\x -> \_ -> x)) [student', book']
+
+-- Verbs
+-- ---------------------------------------- 
 
 -- basic intransitives
 laugh', smoke' :: Ent -> Bool
@@ -142,7 +191,7 @@ smoke' y   = elem y [a]
 
 -- continuized, asterisk-ized intransitives
 laugh, smoke :: Ent -> Prop
-[laugh, smoke] = map (ast . cont_et) [laugh', smoke']
+[laugh, smoke] = map (ast . dynam . (\x -> \_ -> x)) [laugh', smoke']
 
 -- basic transitives
 want', want2', receive' :: Ent -> Ent -> Bool
@@ -159,12 +208,15 @@ receive' x   (Plur y) = and (map (\z -> elem (x,z) [(d,a), (e,b), (f,c)]) y)
 
 -- continuized transitives
 want, want2, receive :: Ent -> Ent -> Prop
-[want, want2, receive] = map cont_eet [want', want2', receive']
+[want, want2, receive] = map (dynam . (\x -> \_ -> x)) [want', want2', receive']
 
--- quantifiers, articles
+-- Determiners
+-- ---------------------------------------- 
+
 every :: (Ent -> Prop) -> GQ
 every res scope i k = 
-  and [not (res x i (\i' -> not (scope x (x:(top res):i') trivial))) | x <- domain] && (k i)
+  and [not (res x i (\i' -> not (scope x (x:(top res):i') trivial)))
+        | x <- domain] && (k i)
 
 some :: (Ent -> Prop) -> GQ
 some res scope i k =
@@ -175,17 +227,15 @@ no res scope i k =
   and [not (res x i (\i' -> scope x (x:i') trivial)) | x <- domain] && (k i)
 
 -- "the" is like "every" except that it doesn't throw anything other than what
--- it is quantifying over onto the stack; uniqueness presuppositions absent here
+--   it is quantifying over onto the stack; uniqueness presuppositions absent
+--   here
 the :: (Ent -> Prop) -> GQ
-the res = cont_e (top res)
-{-
-the2 :: (Ent -> Prop) -> GQ
-the2 res scope i k =
-  and [not (res x i (\i' -> not (scope x (x:i') trivial))) | x <- domain] && (k (x:i))
--}
+the res = arg_raise (top res)
 
--- scope-taking adjectives
-same, different :: (((Ent -> Prop) -> Ent -> Prop) -> GQ) -> (Ent -> Ent -> Prop) -> Ent -> Prop
+-- Adjectives
+-- ---------------------------------------- 
+
+same, different :: (Adj -> GQ) -> (Ent -> Ent -> Prop) -> Ent -> Prop
 same dp verb x i k =
   let fn s@(Atom x) = elem s
       fn   (Plur x) = (\w -> all (\r -> elem r w) x) in
@@ -200,6 +250,9 @@ different dp verb x i k =
         | u <- atoms, v <- (filter (\(Plur x) -> notElem u x) plurs) ++ (delete u atoms),
           elem u (get_pl i), fn v (get_pl i)] && (k i)
 
+
+-- Examples of interpretation
+-- ======================================== 
 
 -- Basic Examples
 
