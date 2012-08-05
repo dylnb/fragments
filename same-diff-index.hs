@@ -142,8 +142,8 @@ conj :: Prop -> Prop -> Prop --after de Groote p. 3, (3)
 conj left right i k = left i (\i' -> right i' k)
 
 -- sum-forming "and", as in "John and Bill went home"
-oplus :: [Ent] -> GQ
-oplus xs = arg_raise (join xs)
+oplus :: Int -> [Ent] -> GQ
+oplus n xs scope i k = scope (join xs) (ins n (join xs) i) k
 
 -- static VP negation
 un :: Prop -> Prop 
@@ -391,10 +391,10 @@ different n dp verb x i k =
 -- "Alex V-ed Dubliners. No other student V-ed the same book":
 --
 -- eval (conj (alex (receive dubliners))
---            (no (cont_et (\y -> elem y [b,c])) (same (\f -> the (f book))
+--            (no (dynam (\_ y -> elem y [b,c])) (same (\f -> the (f book))
 --              (\m n -> receive m n)))) == True
 -- eval (conj (alex (receive dubliners))
---            (no (cont_et (\y -> elem y [b,c])) (same (\f -> the (f book))
+--            (no (dynam (\_ y -> elem y [b,c])) (same (\f -> the (f book))
 --              (\m n -> want m n)))) == False
 
 
