@@ -26,15 +26,21 @@ trivial i = True
 eval :: Prop -> Bool
 eval s = s [] trivial
 
-instance Show (Ent -> Prop) where
-  show p = show (filter (eval . p) domain)
+characteristic_set :: (Ent -> Prop) -> [Ent]
+characteristic_set p = filter (eval . p) domain
 
-instance Show ((Ent -> Prop) -> Prop) where
-  show g = show (map (\h -> [z | z <- atoms, eval (h z)]) funcs)
+instance Show (Ent -> Prop) where
+  show p = show $ characteristic_set p
+
+characteristic_sets :: GQ -> [[Ent]]
+characteristic_sets g =
+  map (\h -> characteristic_set h) funcs
     where fn s@(Atom y) = (\x i k -> x == s)
           fn   (Plur y) = (\x i k -> elem x y)
           funcs = filter (eval . g . ast) (map fn domain)
 
+instance Show ((Ent -> Prop) -> Prop) where
+  show g = show $ characteristic_sets g
 
 -- Populate the domain
 -- ======================================== 
@@ -149,10 +155,8 @@ un s i k = not (s i k) && (k i)
 -- partitive "of"; returns the set of individuals at the bottom of the GQ
 --   lattice (returns the empty set if the GQ is not an ultrafilter)
 of_p :: GQ -> Ent -> Prop
-of_p g y i k = and (map (\h -> eval (h y)) funcs) && (k i)
-  where fn s@(Atom y) = (\x i k -> x == s)
-        fn   (Plur y) = (\x i k -> elem x y)
-        funcs = filter (eval . g . ast) (map fn domain)
+of_p g = dynam $ \_ y -> y `elem` foldr intersect atoms (characteristic_sets g)
+
 
 -- Nouns
 -- ---------------------------------------- 
@@ -250,146 +254,3 @@ different dp verb x i k =
         | u <- atoms, v <- (filter (\(Plur x) -> notElem u x) plurs) ++ (delete u atoms),
           elem u (get_pl i), fn v (get_pl i)] && (k i)
 
-
--- Examples of interpretation
--- ======================================== 
-
--- Basic Examples
-
--- eval (alex laugh) == True
--- he 0 laugh [a,b] trivial == True
--- he 1 smoke [a,b] trivial == False
--- eval ((alex laugh) `conj` (he 0 smoke)) == True
--- eval (some student laugh) == True
--- eval (every student laugh) == True
--- eval (every student smoke) == False
-
--- "Every student V-ed the (same) book":
---
--- eval (every student (\m -> the book (\n -> want n m))) == False
--- eval (every student (\m -> the book (\n -> receive n m))) == False
--- eval (every student (same (\f -> the (f book)) (\m n -> want m n))) == True
--- eval (every student (same (\f -> the (f book)) 
---        (\m n -> receive m n))) == False
-
--- "Every student V-ed a (different) book":
---
--- eval (every student (\m -> some book (\n -> want n m))) == True
--- eval (every student (\m -> some book (\n -> receive n m))) == True
--- eval (every student (different (\f -> some (f book)) 
---        (\m n -> want m n))) == False
--- eval (every student (different (\f -> some (f book)) 
---        (\m n -> receive m n))) == True
-
--- Throws a runtime error, since stack must have either a sum-individual or two
---   atomic individuals to distribute over
--- eval (alex (different (\f -> some (f book)) (\m n -> receive m n)))
--- eval (alex (same (\f -> the (f book)) (\m n -> receive m n)))
--- eval (some student (different (\f -> some (f book)) (\m n -> receive m n)))
--- eval (some student (same (\f -> the (f book)) (\m n -> receive m n)))
-
-
--- Plurals
-
--- eval (the (pl student) (\m -> want dubliners m)) == True
--- eval (the (pl student) (same (\f -> the (f book)) 
---        (\m n -> want m n))) == True
--- eval (the (pl student) (same (\f -> the (f book)) 
---        (\m n -> receive m n))) == False
--- eval (oplus [a,b] (same (\f -> the (f book)) (\m n -> want m n))) == True
--- eval (oplus [a,b] (same (\f -> the (f book)) (\m n -> receive m n))) == False
-
--- No apparatus for bare plurals yet, but if we pretend that plurals can license
---   singular "different"...
-
--- eval (the (pl student) (different (\f -> some (f book)) 
---        (\m n -> want m n))) == False
--- eval (the (pl student) (different (\f -> some (f book)) 
---        (\m n -> receive m n))) == True
--- eval (oplus [a,b] (different (\f -> some (f book)) 
---        (\m n -> want m n))) == False
--- eval (oplus [a,b] (different (\f -> some (f book)) 
---        (\m n -> receive m n))) == True
-
--- "No student(s) V-ed the (same) book":
---
--- eval (no student (\m -> some book (\n -> want n m))) == False
--- eval (no student (\m -> some book (\n -> receive n m))) == False
-
--- Throws a runtime error (though marginally grammatical)
--- eval (no student (same (\f -> the (f book)) (\m n -> want m n)))
--- eval (no student (different (\f -> some (f book)) (\m n -> want m n)))
-
--- eval (no (pl student) (same (\f -> the (f book)) 
---        (\m n -> want m n))) == False
--- eval (no (pl student) (same (\f -> the (f book)) 
---        (\m n -> receive m n))) == True
--- eval (no (pl student) (different (\f -> some (f book)) 
---        (\m n -> want m n))) == True
--- eval (no (pl student) (different (\f -> some (f book)) 
---        (\m n -> receive m n))) == False
-
-
--- Partitives
-
--- Have to use "ast" instead of "pl" for the plural partitive object, again
---   becuase there's no apparatus for bare plurals
-
--- eval (some (of_p (the (pl student))) smoke) == True
--- eval (alex (\m -> some (of_p (the (ast book))) (\n -> want n m))) == True
-
---"Alex and Bill / The students / Every student V-ed some of the same books":
---
--- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) 
---        (\m n -> want m n))) == True
--- eval (oplus [a,b] (same (\f -> some (of_p (the (f (ast book))))) 
---        (\m n -> receive m n))) == False
--- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book)))))
---        (\m n -> want m n))) == True
--- eval (the (pl student) (same (\f -> some (of_p (the (f (ast book))))) 
---        (\m n -> receive m n))) == False
--- eval (every student (same (\f -> some (of_p (the (f (ast book))))) 
---        (\m n -> want m n))) == True
--- eval (every student (same (\f -> some (of_p (the (f (ast book))))) 
---        (\m n -> receive m n))) == False
-
--- "Alex and Bill / etc. V-ed none of the same books":
---
--- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) 
---        (\m n -> want m n))) == False
--- eval (oplus [a,b] (same (\f -> no (of_p (the (f (ast book))))) 
---        (\m n -> receive m n))) == True
--- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) 
---        (\m n -> want m n))) == False
--- eval (the (pl student) (same (\f -> no (of_p (the (f (ast book))))) 
---        (\m n -> receive m n))) == True
--- eval (every student (same (\f -> no (of_p (the (f (ast book))))) 
---        (\m n -> want m n))) == False
--- eval (every student (same (\f -> no (of_p (the (f (ast book))))) 
---        (\m n -> receive m n))) == True
-
-
--- External Readings
-
--- eval (conj (alex (want dubliners))
---            (bill (same (\f -> the (f book)) (\m n -> want m n)))) == True
--- eval (conj (alex (want dubliners))
---            (bill (same (\f -> the (f book)) (\m n -> receive m n)))) == False
--- eval (conj (alex (want dubliners))
---            (bill (different (\f -> some (f book)) (\m -> want m n)))) == False
--- eval (conj (alex (want dubliners))
---            (bill (different (\f -> some (f book)) (\m -> want m n)))) == True
-
--- "Alex V-ed Dubliners. No other student V-ed the same book":
---
--- eval (conj (alex (receive dubliners))
---            (no (cont_et (\y -> elem y [b,c])) (same (\f -> the (f book))
---              (\m n -> receive m n)))) == True
--- eval (conj (alex (receive dubliners))
---            (no (cont_et (\y -> elem y [b,c])) (same (\f -> the (f book))
---              (\m n -> want m n)))) == False
-
-
--- Problem Sentences
--- eval (no (pl student) (\m -> some book (\n -> want n m))) == False
--- eval (no (pl student) (\m -> some book (\n -> receive n m))) == True

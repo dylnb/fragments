@@ -1,0 +1,145 @@
+same-diff-index examples:
+
+
+*** Basic Examples ***
+
+eval (every 0 student laugh) == True
+
+eval (every 0 student smoke) == False
+
+eval (every 1 student smoke) == False
+
+eval (every 1 student laugh) == True
+
+eval (some 1 student smoke) == True
+
+eval (alex laugh `conj` he 0 smoke) == True
+
+eval (bill laugh `conj` he 0 smoke) == False
+
+
+
+*** "Every student V-ed the (same) book" ***
+
+eval (every 0 student (\m -> the 1 book (\n -> want n m))) == False
+
+eval (every 0 student (\m -> the 1 book (\n -> receive n m))) == False
+
+eval (every 0 student $ want << same 0 (\f -> the 1 (f book))) == True
+
+eval (every 0 student $ receive << same 0 (\f -> the 1 (f book))) == False
+
+
+
+*** "Every student V-ed a (different) book" ***
+
+eval (every 0 student (\m -> some 1 book (\n -> want n m))) == True
+
+eval (every 0 student (\m -> some 1 book (\n -> receive n m))) == True
+
+eval (every 0 student $ want << different 0 (\f -> some 1 (f book))) == False
+
+eval (every 0 student $ receive << different 0 (\f -> some 1 (f book))) == True
+
+
+
+*** Plurals ***
+
+eval (the 0 (pl student) $ want dubliners) == True
+
+eval (the 0 (pl student) $ want << same 0 (\f -> the 1 (f book))) == True
+
+eval (the 0 (pl student) $ receive << same 0 (\f -> the 1 (f book))) == False
+
+eval (oplus 0 [a,b] $ want << same 0 (\f -> the 1 (f book))) == True
+
+eval (oplus 0 [a,b] $ receive << same 0 (\f -> the 1 (f book))) == False
+
+
+
+*** "No student(s) V-ed the (same) book" ***
+
+eval (no 0 student (\m -> some 1 book (\n -> want n m))) == False
+
+eval (no 0 student (\m -> some 1 book (\n -> receive n m))) == False
+
+eval (no 0 student $ want << same 0 (\f -> the 1 (f book)))
+Exception: Prelude.(!!): index too large
+
+eval (no 0 student $ want << different 0 (\f -> some 1 (f book)))
+Exception: Prelude.(!!): index too large
+
+eval (no 0 (pl student) $ want << same 0 (\f -> the 1 (f book))) == False
+
+eval (no 0 (pl student) $ receive << same 0 (\f -> the 1 (f book))) == True
+
+eval (no 0 (pl student) $ receive << different 0 (\f -> some 1 (f book))) == False
+
+eval (no 0 (pl student) $ want << different 0 (\f -> some 1 (f book))) == True
+
+
+
+
+*** Partitives ***
+
+eval ((some 0 . of_p . the 1 $ (pl student)) smoke) == True
+
+
+### "some of the same" ###
+
+eval (alex (\m -> (some 0 . of_p . the 1 $ (ast book)) (\n -> want n m))) == True
+
+eval (oplus 0 [a,b] $ want << same 0 (\f -> some 1 . of_p . the 1 $ f (ast book))) == True
+
+eval (oplus 0 [a,b] $ want << same 0 (\f -> some 1 . of_p . the 2 $ f (ast book))) == True
+
+eval (oplus 0 [a,b] $ want << same 0 (\f -> some 0 . of_p . the 0 $ f (ast book))) == True
+
+eval (oplus 0 [a,b] $ receive << same 0 (\f -> some 0 . of_p . the 0 $ f (ast book))) == False
+
+eval (the 0 (pl student) $ want << same 0 (\f -> some 1 . of_p . the 2 $ f (ast book))) == True
+
+eval (the 0 (pl student) $ receive << same 0 (\f -> some 1 . of_p . the 2 $ f (ast book))) == False
+
+eval (every 0 student $ want << same 0 (\f -> some 1 . of_p . the 2 $ f (ast book))) == True
+
+eval (every 0 student $ receive << same 0 (\f -> some 1 . of_p . the 2 $ f (ast book))) == False
+
+
+### "none of the same" ###
+
+eval (every 0 student $ receive << same 0 (\f -> no 1 . of_p . the 2 $ f (ast book))) == True
+
+eval (oplus 0 [a,b] $ receive << same 0 (\f -> no 1 . of_p . the 2 $ f (ast book))) == True
+
+eval (oplus 0 [a,b] $ want << same 0 (\f -> no 1 . of_p . the 2 $ f (ast book))) == False
+
+eval (the 0 (pl student) $ want << same 0 (\f -> no 1 . of_p . the 2 $ f (ast book))) == False
+
+eval (the 0 (pl student) $ receive << same 0 (\f -> no 1 . of_p . the 2 $ f (ast book))) == True
+
+
+
+*** External Readings ***
+
+eval ((alex $ want dubliners) `conj` (bill $ want << same 1 (\f -> the 2 (f book)))) == True
+
+eval ((alex $ receive dubliners) `conj` (bill $ receive << same 1 (\f -> the 2 (f book)))) == False
+
+eval ((alex $ want dubliners) `conj` (bill $ want << different 1 (\f -> some 2 (f book)))) == False
+
+eval ((alex $ receive dubliners) `conj` (bill $ receive << different 1 (\f -> some 2 (f book)))) == True
+
+
+"Alex want Dubliners. No other student wanted the same book"
+eval ((alex $ want dubliners) `conj` ((no 0 . dynam $ \_ y -> elem y [b,c]) $ want << same 0 (\f -> the 1 (f book)))) == False
+
+"Alex received Dubliners. No other student received the same book"
+eval ((alex $ receive dubliners) `conj` ((no 0 . dynam $ \_ y -> elem y [b,c]) $ receive << same 0 (\f -> the 1 (f book)))) == True
+
+
+*** Problem Sentences ***
+
+eval (no 0 (pl student) (\m -> some 1 book (\n -> want n m))) == False
+
+eval (no 0 (pl student) (\m -> some 1 book (\n -> receive n m))) == True
