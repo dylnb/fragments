@@ -26,15 +26,21 @@ trivial i = True
 eval :: Prop -> Bool
 eval s = s [] trivial
 
-instance Show (Ent -> Prop) where
-  show p = show (filter (eval . p) domain)
+characteristic_set :: (Ent -> Prop) -> [Ent]
+characteristic_set p = filter (eval . p) domain
 
-instance Show ((Ent -> Prop) -> Prop) where
-  show g = show (map (\h -> [z | z <- atoms, eval (h z)]) funcs)
+instance Show (Ent -> Prop) where
+  show p = show $ characteristic_set p
+
+characteristic_sets :: GQ -> [[Ent]]
+characteristic_sets g =
+  map (\h -> characteristic_set h) funcs
     where fn s@(Atom y) = (\x i k -> x == s)
           fn   (Plur y) = (\x i k -> elem x y)
           funcs = filter (eval . g . ast) (map fn domain)
 
+instance Show ((Ent -> Prop) -> Prop) where
+  show g = show $ characteristic_sets g
 
 -- Populate the domain
 -- ======================================== 
@@ -149,10 +155,8 @@ un s i k = not (s i k) && (k i)
 -- partitive "of"; returns the set of individuals at the bottom of the GQ
 --   lattice (returns the empty set if the GQ is not an ultrafilter)
 of_p :: GQ -> Ent -> Prop
-of_p g y i k = and (map (\h -> eval (h y)) funcs) && (k i)
-  where fn s@(Atom y) = (\x i k -> x == s)
-        fn   (Plur y) = (\x i k -> elem x y)
-        funcs = filter (eval . g . ast) (map fn domain)
+of_p g = dynam $ \_ y -> y `elem` foldr intersect atoms (characteristic_sets g)
+
 
 -- Nouns
 -- ---------------------------------------- 

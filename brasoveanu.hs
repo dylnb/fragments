@@ -1,12 +1,19 @@
+{-# LANGUAGE TypeFamilies, FlexibleInstances, FlexibleContexts #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+
 -- mashup of Brasoveanu 2011 with de Groote 2007
 import Debug.Trace
 import Data.List
+import Data.Maybe
+import Control.Monad
 
 type Ent = Char
 type Stack = [Ent]
 type Stackset = [Stack]
 type Continuation = Stackset -> Bool
 type Prop = Stackset -> Continuation -> Bool
+
+type GQ = (Int -> Prop) -> Prop
 
 ins :: Int -> Ent -> Stack -> Stack
 ins 0 x i = x:i
@@ -20,6 +27,23 @@ trivial i = True
 
 eval :: Prop -> Bool
 eval s = s [[]] trivial
+
+characteristic_set :: (Int -> Prop) -> [Ent]
+characteristic_set p = [x | (x,n) <- zip domain [0..], p n [domain] trivial]
+
+instance Show (Int -> Prop) where
+  show p = show $ characteristic_set p 
+
+characteristic_sets :: GQ -> [[Ent]]
+characteristic_sets g =
+  map (\h -> characteristic_set h) funcs
+    where powerset = \xs -> filterM (\x -> [True, False]) xs
+          p_sets = (powerset domain) \\ [""]
+          fn xs = (\n is k -> (is!!0!!n) `elem` xs && (k is))
+          funcs = filter (eval . g) (map fn p_sets)
+
+instance Show ((Int -> Prop) -> Prop) where
+  show g = show $ characteristic_sets g
 
 john :: (Int -> Prop) -> Prop
 john p is k = p 0 (map (\i -> a:i) is) k
