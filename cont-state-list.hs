@@ -1,10 +1,16 @@
 {-# LANGUAGE TypeFamilies, FlexibleInstances, FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
+-- STACK TYPE MUST BE GENERALIZED TO HANDLE FUNCTIONAL DREFS!!!
+-- need a union type for Ent (Atom Int | Func Stack), but this requires
+-- pattern matching in all of the definitions below :(
+
 import Control.Monad.State
 import Control.Monad.Cont
 import Control.Applicative
 import Data.List
+import Data.List.Split (chunksOf, splitPlaces)
+import Data.Ord
 --import Data.Maybe
 --import Debug.Hood.Observe
 --import Debug.Trace
@@ -17,26 +23,42 @@ type E = Dcont Int
 type T = Dcont Bool
 type ET = Dcont (Int -> Bool)
 type EET = Dcont (Int -> Int -> Bool)
+type EEET = Dcont (Int -> Int -> Int -> Bool)
 type ETE = Dcont ((Int -> Bool) -> Int)
 type ETET = Dcont ((Int -> Bool) -> Int -> Bool)
 
-class Lowerable a where
-  lower :: Dcont a -> Dstate a
-instance Lowerable Bool where
-  lower m = runCont m return
-instance Lowerable Int where
-  lower m = runCont m (\x -> unit' [x] True) >>= (\_ -> pop)
 
+
+-- AUXILIARY FUNCTIONS
+-- ===================
+
+-- Characteristic set of a property
 characteristic :: (Int -> Bool) -> Stack
 characteristic p = filter p univ
 
-pop :: Dstate Int
---pop = state $ \s -> let (x:xs) = reverse s in (x, reverse xs)
-pop = state $ \(x:xs) -> (x, xs)
+-- Stack difference
+minus :: Stack -> Stack -> Stack
+s1 `minus` s2 = take ((length s1) - (length s2)) s1
 
+-- Normal pop operation for stacks
+pop :: Dstate Int
+pop = state $ \s -> let (x:xs) = reverse s in (x, reverse xs)
+--pop = state $ \(x:xs) -> (x, xs)
+
+-- Dynamically-charged State.List unit function
 unit' :: Stack -> a -> Dstate a
---unit' s' x = state $ \s -> (x, s++s')
-unit' s' x = state $ \s -> (x, s'++s)
+unit' s' x = state $ \s -> (x, s++s')
+--unit' s' x = state $ \s -> (x, s'++s)
+
+-- Runs a State.List value against the empty state
+eval :: Dstate a -> [(a,Stack)]
+eval = (`runStateT` [])
+
+
+-- MONADIC OPERATIONS
+-- ==================
+
+-- First-Order Continuized Application
 
 ret :: a -> Dcont a
 ret = return
@@ -48,14 +70,26 @@ lap m h = do
   f <- h
   return $ f x
 
+-- First-Order Unit Function
+rap :: Dcont (a -> b) -> Dcont a -> Dcont b
+rap = ap 
+
+-- First-Order Lower Function
+-- (overloaded for continuized individuals to make printing easier)
+class Lowerable a where
+  lower :: Dcont a -> Dstate a
+instance Lowerable Bool where
+  lower m = runCont m return
+instance Lowerable Int where
+  lower m = runCont m (\x -> unit' [x] True) >>= (\_ -> pop)
+
+
+-- Second-Order Continuized Application
 llap :: Dcont (Dcont a) -> Dcont (Dcont (a -> b)) -> Dcont (Dcont b)
 llap m h = do
  x <- m
  f <- h
  return $ lap x f
-
-rap :: Dcont (a -> b) -> Dcont a -> Dcont b
-rap = ap 
 
 rrap :: Dcont (Dcont (a -> b)) -> Dcont (Dcont a) -> Dcont (Dcont b)
 rrap h m = do
@@ -63,12 +97,11 @@ rrap h m = do
   x <- m
   return $ rap f x
 
+-- Second-Order Unit Function
 rreturn :: Dcont a -> Dcont (Dcont a)
 rreturn f = lap f (return return)
 
-eval :: Dstate a -> [(a,Stack)]
-eval = (`runStateT` [])
-
+-- Second-Order Lower Function
 lower2 :: Dcont (Dcont a) -> Dcont a
 lower2 outer = cont $ \k -> StateT $ \s -> 
   runStateT
@@ -83,34 +116,45 @@ lower2 outer = cont $ \k -> StateT $ \s ->
       )
     ) s
 
-minus :: Stack -> Stack -> Stack
-s1 `minus` s2 = take ((length s1) - (length s2)) s1
+
+-- SIMPLE BINDING
+-- ==============
 
 up :: E -> E
 up m = cont $ \k ->
-  --runCont m (\x -> StateT $ \s -> runStateT (k x) (s++[x]))
-  runCont m (\x -> StateT $ \s -> runStateT (k x) (x:s))
+  runCont m (\x -> StateT $ \s -> runStateT (k x) (s++[x]))
+  --runCont m (\x -> StateT $ \s -> runStateT (k x) (x:s))
 
+
+-- THE MODEL AND THE LANGUAGE
+-- ==========================
    
 univ :: Stack
 univ = [1..10]
 
+-- Proper Names
 one, two, three, four, five, six, seven, eight, nine, ten :: E
 [one, two, three, four, five, six, seven, eight, nine, ten] = map return univ
 
+-- Pronouns
 he :: Int -> E
 he n = cont $ \k -> do
   s <- get
-  --k (trace ("he-stack: " ++ show (length s)) s!!n)
   k (s!!n)
 
-leq3, leq5, geq8, triv :: ET
-[leq3, leq5, geq8] = map return [(<= 3), (<= 5), (>= 8)]
+-- One-Place Predicates
+leq3, bt46, bt24, geq8, triv :: ET
+[leq3, bt46, bt24, geq8] =
+  map return [(<= 3), (`elem` [4,5,6]), (`elem` [2,3,4]), (>= 8)]
 triv = return (const True)
 
+-- Two-Place Predicates
 eq, lt, gt :: EET
 [eq, lt, gt] = map return [(==), (>), (<)]
 
+-- Three-Place Predicates
+gcd' :: EEET
+gcd' = return (\n m g -> gcd n m == g)
 
 -- CHOICE FUNCTIONS (broken)
 -- ===============================
@@ -177,23 +221,17 @@ safechoiceeveryS = cont $ \k -> StateT $ \s ->
 check :: ET -> Int -> Dstate Bool
 check p = lower . rap p . return
 
-compress :: [(Bool,Stack)] -> Stack
-compress [] = []
-compress ls = map snd $ foldl1 intersect enum_stacks
-  where enum_stacks = [(zip [(0::Int)..] . snd) l | l <- ls]
-
 someD :: ET -> E
 someD p  = cont $ \k -> do
   x <- lift univ
   b <- check p x 
   if b then k x else mzero
 
-trialsome :: ET -> E
-trialsome p = cont $ \k -> StateT $ \s ->
-  let xs = filter (any fst . eval . check p) univ in
-  let ps = map (\x -> runStateT (k x) s) xs in
-  concat ps
-
+altsomeD :: ET -> E
+altsomeD p = cont $ \k -> do
+  let xs = map ((>>) <$> mfilter id . check p <*> return) univ
+  (foldl1 mplus xs) >>= k
+  
 -- almost right, but doesn't pass referents from restr to scope 
 simpleeveryD :: ET -> E
 simpleeveryD p = cont $ \k -> do
@@ -201,15 +239,7 @@ simpleeveryD p = cont $ \k -> do
   let ps = map k xs
   foldl1 (liftM2 (&&)) ps
 
-
--- xs here is interesting. it's a sort of
--- stateful characterisitc set of p. we could go a step farther, and reduce p
--- to a single Dstate Int, by mapping a state over the list and concatenating
--- the results:
---   p' = foldl1 (mplus) xs
--- This could then be directly injected into the continuation (p' >>= k), but
--- there would be no way to tell where the contributions of one individual
--- ended and another began 
+-- internally dynamic universal
 everyD :: ET -> E
 everyD p = cont $ \k -> do
   let xs = filter (not . null . eval) $
@@ -218,6 +248,17 @@ everyD p = cont $ \k -> do
   let ps = map (>>= k) xs
   foldl1 (liftM2 (&&)) ps
   where bottle x t = mfilter id t >> return x
+-- xs here is interesting. it's a sort of
+-- stateful characteristic set of p. we could go a step farther, and reduce p
+-- to a single Dstate Int, by mapping a state over the list and concatenating
+-- the results:
+--   p' = foldl1 mplus xs
+-- This could then be directly injected into the continuation (p' >>= k), but
+-- there would be no way to tell where the contributions of one individual, so
+-- it would only be useful for "some"
+-- ended and another began 
+--
+--
 -- "bottle" takes an int x and a bool-state t, and replaces the (True, s') pairs
 -- in t with (x, s') pairs, and discards the rest; intuitively, it filters t, 
 -- and then "bottles" x up with the various result states:
@@ -226,6 +267,29 @@ everyD p = cont $ \k -> do
 -- empty individual (\s -> []), which has to swept out later. the
 -- commented-out line is equivalent
 
+
+
+-- ADJECTIVES SENSITIVE TO ACCUMULATION
+-- ===================================
+different :: ETET
+different = cont $ \k -> do {s <- get; k (\p x -> p x && x `notElem` s)}
+
+longer :: ETET
+longer = cont $ \k -> do {s <- get; k (\p x -> p x && x > maximum s)}
+
+
+
+-- TEST ZONE AND TEST TERMS
+-- ========================
+
+-- these entries are not internally dynamic; every iteration of the loop is
+-- evaluated at the matrix state
+trialsome :: ET -> E
+trialsome p = cont $ \k -> StateT $ \s ->
+  let xs = filter (any fst . eval . check p) univ in
+  let ps = map (\x -> runStateT (k x) s) xs in
+  concat ps
+
 trialeveryD :: ET -> E
 trialeveryD p = cont $ \k -> StateT $ \s ->
   let xs = filter (not . null . eval) $
@@ -233,18 +297,7 @@ trialeveryD p = cont $ \k -> StateT $ \s ->
   let ps = map (\x -> runStateT (x >>= k) s) xs in
   foldl1 dynand ps
   where dynand l l' = [(x && x', t ++ t') | (x,t) <- l, (x',t') <- l']
--- matches the simple formal definition given in the paper, but doesn't work
--- for 'different', because all the states are evaluated before being crossed
--- and conjoined
 
-different :: ETET
-different = cont $ \k -> do {s <- get; k (\p x -> p x && x `notElem` s)}
-
--- ==============================
-
-
--- TEST ZONE
--- ==============================
 
 --pushS :: Int -> Dstate Int
 --pushS n = withStateT (n:)
@@ -258,14 +311,57 @@ up2 m = m >>= (\x -> cont $ \k -> do {modify (x:); k x})
 --up3 :: E -> E
 --up3 m = do {x <- m; pushC x}
 
-longest :: ETET
-longest = cont $ \k -> do {s <- get; k (\p x -> p x && x > maximum s)}
-
 w, w',w'' :: Dstate Int
 w   = StateT $ \s -> [(3,7:s),(3,8:s),(3,9:s)]
 w'  = StateT $ \s -> [(4,9:s),(4,8:s),(4,7:s)]
 w'' = StateT $ \s -> [(1,s),(2,s),(3,s)]
 
+trivstate, emptystate :: Dstate Bool
+trivstate  = StateT $ \s -> [(True,s)]
+emptystate = StateT $ \s -> []
 
 c :: Int -> Dstate Bool
 c x = lower $ lap (up $ someD leq3) (rap eq (up $ return x))
+
+j :: Dstate (Dstate Int) -> Dstate Int
+j = join
+
+-- Machinery for making functional witnesses. Unfortunately, it can't be
+-- rolled into the rest of the semantics until the Stack and Ent types are
+-- genrealized
+
+diffs :: Stack -> Stack
+diffs s = [(s!!n) - (s!!(n-1)) | n <- [1..length s - 1]]
+
+findAnchors :: [(Bool,Stack)] -> Stack
+findAnchors alts = map fst $ foldl1 intersect enumStacks
+  where enumStacks = [(zip [0..] . snd) alt | alt <- alts]
+
+compress :: [(Bool,Stack)] -> Stack
+compress alts = map snd $ foldl1 intersect enumStacks
+  where enumStacks = [(zip [0..] . snd) alt | alt <- alts]
+
+makeFuncs :: [Int] -> Stack -> [(Int,Stack)]
+makeFuncs indices hist =
+  foldl (\funcs is -> (last is, (reverse . init) is) : funcs) [] splits
+  where splits = splitPlaces (head indices + 1 : diffs indices) hist
+
+functionalize :: [(Bool,Stack)] -> [(Bool,[(Int,Stack)])]
+functionalize alts = map (\(b,hist) -> (b, makeFuncs inds hist)) alts
+  where inds = findAnchors alts
+
+-- generalizes "findAnchors" to patterns generated by multiple universals
+-- (probably unnecessary if universals automatically functionalize as soon as
+-- they take scope)
+findAnchs :: Stack -> [Stack]
+findAnchs indices = (maximumBy (comparing length) parts)
+  where divisors x = [y | y <- [2..(x `div` 2)], x `mod` y ==0] ++ [x]
+        chunks     = [chunksOf n indices | n <- divisors (length indices)]
+        parts      = filter ((== 1) . length . nub . map diffs) chunks
+    
+
+
+-- EXAMPLES
+-- ========
+
+-- eval $ lower $ rap geq8 nine
