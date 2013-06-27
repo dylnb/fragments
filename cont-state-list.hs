@@ -15,33 +15,47 @@ import Data.Ord
 --import Debug.Hood.Observe
 --import Debug.Trace
 
-type Stack = [Int]
+data Ref = Ent (String,Int) | Func (Ref -> Ref) --deriving (Eq,Show)
+type Stack = [Ref]
 type Dstate r = StateT Stack [] r
 type Dcont a = Cont (Dstate Bool) a
 
-type E = Dcont Int
+type E = Dcont Ref
 type T = Dcont Bool
-type ET = Dcont (Int -> Bool)
-type EET = Dcont (Int -> Int -> Bool)
-type EEET = Dcont (Int -> Int -> Int -> Bool)
-type ETE = Dcont ((Int -> Bool) -> Int)
-type ETET = Dcont ((Int -> Bool) -> Int -> Bool)
+type ET = Dcont (Ref -> Bool)
+type EET = Dcont (Ref -> Ref -> Bool)
+type EEET = Dcont (Ref -> Ref -> Ref -> Bool)
+type ETE = Dcont ((Ref -> Bool) -> Int)
+type ETET = Dcont ((Ref -> Bool) -> Int -> Bool)
 
+
+instance Show Ref where
+  show (Ent (x,y)) = x ++ show y
+  show (Func x) = show "func"
+
+instance Eq Ref where
+  (Ent x) == (Ent y) = x == y
+  _ == _ = False
+
+instance Ord Ref where
+  compare (Ent (name,tag)) (Ent (name',tag')) = compare tag tag'
+  compare _ _ = EQ
 
 
 -- AUXILIARY FUNCTIONS
 -- ===================
 
 -- Characteristic set of a property
-characteristic :: (Int -> Bool) -> Stack
+characteristic :: (Ref -> Bool) -> Stack
 characteristic p = filter p univ
 
 -- Stack difference
+-- (this only makes sense if stacks are guaranteed not to diverge)
 minus :: Stack -> Stack -> Stack
 s1 `minus` s2 = take ((length s1) - (length s2)) s1
 
 -- Normal pop operation for stacks
-pop :: Dstate Int
+pop :: Dstate Ref
 pop = state $ \s -> let (x:xs) = reverse s in (x, reverse xs)
 --pop = state $ \(x:xs) -> (x, xs)
 
@@ -80,7 +94,7 @@ class Lowerable a where
   lower :: Dcont a -> Dstate a
 instance Lowerable Bool where
   lower m = runCont m return
-instance Lowerable Int where
+instance Lowerable Ref where
   lower m = runCont m (\x -> unit' [x] True) >>= (\_ -> pop)
 
 
@@ -129,12 +143,20 @@ up m = cont $ \k ->
 -- THE MODEL AND THE LANGUAGE
 -- ==========================
    
-univ :: Stack
-univ = [1..10]
+boys, girls, poems, univ :: Stack
+boys  = map (\x -> Ent ("b",x)) [1..6]
+girls = map (\x -> Ent ("g",x)) [1..6]
+poems = map (\x -> Ent ("p",x)) [1..6]
+univ = concat [boys, girls, poems]
 
 -- Proper Names
-one, two, three, four, five, six, seven, eight, nine, ten :: E
-[one, two, three, four, five, six, seven, eight, nine, ten] = map return univ
+-- one, two, three, four, five, six, seven, eight, nine, ten :: E
+-- [one, two, three, four, five, six, seven, eight, nine, ten] = map return univ
+boy1, boy2, boy3, boy4, boy5, boy6 :: E
+[boy1, boy2, boy3, boy4, boy5, boy6] = map return boys
+
+girl1, girl2, girl3, girl4, girl5, girl6 :: E
+[girl1, girl2, girl3, girl4, girl5, girl6] = map return girls
 
 -- Pronouns
 he :: Int -> E
@@ -142,10 +164,31 @@ he n = cont $ \k -> do
   s <- get
   k (s!!n)
 
+
 -- One-Place Predicates
-leq3, bt46, bt24, geq8, triv :: ET
-[leq3, bt46, bt24, geq8] =
-  map return [(<= 3), (`elem` [4,5,6]), (`elem` [2,3,4]), (>= 8)]
+--boy, girl, short, tall, triv :: ET
+
+boy, girl, poem, short, tall, triv :: ET
+boy = let boy' (Ent ("b",_)) = True
+          boy' _             = False in
+      return boy'
+
+girl = let girl' (Ent ("g",_)) = True
+           girl' _             = False in
+       return girl'
+
+poem = let poem' (Ent ("p",_)) = True
+           poem' _             = False in
+       return poem'
+ 
+short = let short' (Ent (_,n)) = n <= 3
+            short' _           = False in
+        return short'
+
+tall = let tall' (Ent (_,n)) = n <= 3
+           tall' _           = False in
+       return tall'
+ 
 triv = return (const True)
 
 -- Two-Place Predicates
@@ -365,3 +408,5 @@ findAnchs indices = (maximumBy (comparing length) parts)
 -- ========
 
 -- eval $ lower $ rap geq8 nine
+
+-}
