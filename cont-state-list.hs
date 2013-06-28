@@ -13,7 +13,7 @@ import Data.List.Split (chunksOf, splitPlaces)
 import Data.Ord
 --import Data.Maybe
 --import Debug.Hood.Observe
---import Debug.Trace
+import Debug.Trace
 
 data Ref = Ent (String,Int) | Func (Ref -> Ref) --deriving (Eq,Show)
 type Stack = [Ref]
@@ -25,8 +25,8 @@ type T = Dcont Bool
 type ET = Dcont (Ref -> Bool)
 type EET = Dcont (Ref -> Ref -> Bool)
 type EEET = Dcont (Ref -> Ref -> Ref -> Bool)
-type ETE = Dcont ((Ref -> Bool) -> Int)
-type ETET = Dcont ((Ref -> Bool) -> Int -> Bool)
+type ETE = Dcont ((Ref -> Bool) -> Ref)
+type ETET = Dcont ((Ref -> Bool) -> Ref -> Bool)
 
 
 instance Show Ref where
@@ -158,6 +158,9 @@ boy1, boy2, boy3, boy4, boy5, boy6 :: E
 girl1, girl2, girl3, girl4, girl5, girl6 :: E
 [girl1, girl2, girl3, girl4, girl5, girl6] = map return girls
 
+poem1, poem2, poem3, poem4, poem5, poem6 :: E
+[poem1, poem2, poem3, poem4, poem5, poem6] = map return poems
+
 -- Pronouns
 he :: Int -> E
 he n = cont $ \k -> do
@@ -166,9 +169,7 @@ he n = cont $ \k -> do
 
 
 -- One-Place Predicates
---boy, girl, short, tall, triv :: ET
-
-boy, girl, poem, short, tall, triv :: ET
+boy, girl, poem, triv :: ET
 boy = let boy' (Ent ("b",_)) = True
           boy' _             = False in
       return boy'
@@ -181,87 +182,64 @@ poem = let poem' (Ent ("p",_)) = True
            poem' _             = False in
        return poem'
  
-short = let short' (Ent (_,n)) = n <= 3
-            short' _           = False in
-        return short'
-
-tall = let tall' (Ent (_,n)) = n <= 3
-           tall' _           = False in
-       return tall'
- 
 triv = return (const True)
 
+
 -- Two-Place Predicates
-eq, lt, gt :: EET
-[eq, lt, gt] = map return [(==), (>), (<)]
+matches, envies, listensTo :: EET
+--[eq, lt, gt] = map return [(==), (>), (<)]
+
+-- people match anyone that their "tags" are equal to:
+-- b1 matches g1, g3 matches g3, but g5 doesn't match b4 or g4
+matches = let matches' (Ent (_,n)) (Ent (_,m)) = n == m
+              matches' _ _                     = False in
+          return matches'
+
+-- people envy people of the same gender that they are less than:
+-- b1 envies b3, but b3 does not envy b1 nor does he envy g6
+envies = let envies' (Ent (x,n)) (Ent (y,m)) = x == y &&
+                                               n > m
+             envies' _ _                     = False in
+          return envies'
+
+-- people listen to people of the opposite gender that they divide evenly:
+-- b2 listens to g6, as does b3, but b4 doesn't, and neither does g2
+listensTo = let lt' (Ent (x,n)) (Ent (y,m)) = x /= y &&
+                                              n `mod` m == 0
+                lt' _ _                     = False in
+          return lt'
 
 -- Three-Place Predicates
-gcd' :: EEET
-gcd' = return (\n m g -> gcd n m == g)
+gave :: EEET
 
--- CHOICE FUNCTIONS (broken)
--- ===============================
+-- boys give girls poems in runs:
+-- b1 gave g2 p3, and b4 gave g5 p6, but b1 didn't give g3 anything, and he
+-- didn't give p4 to anybody
+gave = let gave' (Ent (x,n)) (Ent (y,m)) (Ent (z,o)) =
+             x == "g" && y == "p" && z == "b" &&
+             n == o+1 && m == n+1
+           gave' _ _ _                               = False in
+       return gave'
 
-cf :: Int -> (Int -> Bool) -> Int
-cf n p
-    | n < length plist = plist!!n
-    | otherwise        = -1
-  where plist = characteristic p
 
-restrict :: (((Int -> Bool) -> Int) -> Dstate Bool) -> [(Int -> Bool) -> Int]
-restrict k =
-  filter (\f -> last (head (execStateT (k f) [])) > 0) cfs
-  where cfs = map (cf . subtract 1) univ
-
-choicesome :: ETE
-choicesome = cont $ \k -> do
-  f <- lift (restrict k)
-  k f
-
-safecf :: Int -> (Int -> Bool) -> Int
-safecf n p
-    | n < length plist = plist!!n
-    | otherwise        = maximum plist
-  where plist = characteristic p
-
-safesome :: ETE
-safesome = cont $ \k -> do
-  f <- lift $ map (safecf . subtract 1) univ
-  k f
-
--- there are quirks with multiple quantifiers that are very likely due to "restrict";
--- there is an index error if nothing in the "nuclear scope" is upped;
--- and the stack explodes if the "every" DP is not itself upped;
--- and forget about donkey binding.
-choiceeveryD :: ETE
-choiceeveryD = cont $ \k -> do 
-  let ps = [k f | f <- restrict k]
-  --foldl1 (liftM2 (&&)) (trace ("everyD: " ++ show (length ps)) ps)
-  foldl1 (liftM2 (&&)) ps
-
-choiceeveryS :: ETE
-choiceeveryS = cont $ \k -> StateT $ \s ->
-  let ls = runStateT (runCont choiceeveryD k) s in
-  [(any fst ls, compress ls)]
-
-safechoiceeveryD :: ETE
-safechoiceeveryD = cont $ \k -> do
-  let ps = [k f | f <- map (safecf . subtract 1) univ]
-  foldl1 (liftM2 (&&)) ps
-
-safechoiceeveryS :: ETE
-safechoiceeveryS = cont $ \k -> StateT $ \s ->
-  let ls = runStateT (runCont safechoiceeveryD k) s in
-  [(any fst ls, compress ls)]
-
+-- ET -> ET Adjectives
 -- ==========================
+
+short, tall :: ETET
+short = let short' p e@(Ent (_,n)) = p e && n <= 3
+            short' _ _             = False in
+        return short'
+
+tall = let tall' p e@(Ent (_,n)) = p e && n > 3
+           tall' _ _             = False in
+       return tall'
 
 
 -- ET -> E Quantifiers
 -- ==========================
 
 -- auxiliary functions for working with restrictors
-check :: ET -> Int -> Dstate Bool
+check :: ET -> Ref -> Dstate Bool
 check p = lower . rap p . return
 
 someD :: ET -> E
@@ -311,7 +289,6 @@ everyD p = cont $ \k -> do
 -- commented-out line is equivalent
 
 
-
 -- ADJECTIVES SENSITIVE TO ACCUMULATION
 -- ===================================
 different :: ETET
@@ -324,6 +301,44 @@ longer = cont $ \k -> do {s <- get; k (\p x -> p x && x > maximum s)}
 
 -- TEST ZONE AND TEST TERMS
 -- ========================
+
+-- Machinery for making functional witnesses. Unfortunately, it can't be
+-- rolled into the rest of the semantics until the Stack and Ent types are
+-- genrealized
+
+refMinus :: Ref -> Ref -> Int
+refMinus (Ent (_,n)) (Ent (_,m)) = n - m
+refMinus _ _                     = -1
+
+diffs :: [Int] -> [Int]
+diffs s = [(s!!n) - (s!!(n-1)) | n <- [1..length s - 1]]
+
+findAnchors :: [(Bool,Stack)] -> [Int]
+findAnchors alts = map fst $ foldl1 intersect enumStacks
+  where enumStacks = [(zip [0..] . snd) alt | alt <- alts]
+
+compress :: [(Bool,Stack)] -> Stack
+compress alts = map snd $ foldl1 intersect enumStacks
+  where enumStacks = [(zip [0..] . snd) alt | alt <- alts]
+
+makeFunc :: [Int] -> Stack -> [(Ref,Stack)]
+makeFunc anchs hist =
+  foldl (\funcs is -> (last is, (reverse . init) is) : funcs) [] splits
+  where splits = splitPlaces (head anchs + 1 : diffs anchs) hist
+
+functionalize :: [(Bool,Stack)] -> [(Bool,[(Ref,Stack)])]
+functionalize alts = map (\(b,hist) -> (b, makeFunc anchs hist)) alts
+  where anchs = findAnchors alts
+
+{-
+-- generalizes "findAnchors" to patterns generated by multiple universals
+-- (probably unnecessary if universals automatically functionalize as soon as
+-- they take scope)
+findAnchs :: Stack -> [Stack]
+findAnchs indices = (maximumBy (comparing length) parts)
+  where divisors x = [y | y <- [2..(x `div` 2)], x `mod` y ==0] ++ [x]
+        chunks     = [chunksOf n indices | n <- divisors (length indices)]
+        parts      = filter ((== 1) . length . nub . map diffs) chunks
 
 -- these entries are not internally dynamic; every iteration of the loop is
 -- evaluated at the matrix state
@@ -369,38 +384,6 @@ c x = lower $ lap (up $ someD leq3) (rap eq (up $ return x))
 j :: Dstate (Dstate Int) -> Dstate Int
 j = join
 
--- Machinery for making functional witnesses. Unfortunately, it can't be
--- rolled into the rest of the semantics until the Stack and Ent types are
--- genrealized
-
-diffs :: Stack -> Stack
-diffs s = [(s!!n) - (s!!(n-1)) | n <- [1..length s - 1]]
-
-findAnchors :: [(Bool,Stack)] -> Stack
-findAnchors alts = map fst $ foldl1 intersect enumStacks
-  where enumStacks = [(zip [0..] . snd) alt | alt <- alts]
-
-compress :: [(Bool,Stack)] -> Stack
-compress alts = map snd $ foldl1 intersect enumStacks
-  where enumStacks = [(zip [0..] . snd) alt | alt <- alts]
-
-makeFuncs :: [Int] -> Stack -> [(Int,Stack)]
-makeFuncs indices hist =
-  foldl (\funcs is -> (last is, (reverse . init) is) : funcs) [] splits
-  where splits = splitPlaces (head indices + 1 : diffs indices) hist
-
-functionalize :: [(Bool,Stack)] -> [(Bool,[(Int,Stack)])]
-functionalize alts = map (\(b,hist) -> (b, makeFuncs inds hist)) alts
-  where inds = findAnchors alts
-
--- generalizes "findAnchors" to patterns generated by multiple universals
--- (probably unnecessary if universals automatically functionalize as soon as
--- they take scope)
-findAnchs :: Stack -> [Stack]
-findAnchs indices = (maximumBy (comparing length) parts)
-  where divisors x = [y | y <- [2..(x `div` 2)], x `mod` y ==0] ++ [x]
-        chunks     = [chunksOf n indices | n <- divisors (length indices)]
-        parts      = filter ((== 1) . length . nub . map diffs) chunks
     
 
 
@@ -408,5 +391,6 @@ findAnchs indices = (maximumBy (comparing length) parts)
 -- ========
 
 -- eval $ lower $ rap geq8 nine
+-- functionalize $ eval $ lower $ lap (up $ everyD $ rap tall boy) (rap matches (up $ someD $ rap different $ rap tall girl))
 
 -}
