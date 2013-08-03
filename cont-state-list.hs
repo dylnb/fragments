@@ -1,18 +1,18 @@
 {-# LANGUAGE TypeFamilies, FlexibleInstances, FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-import Control.Monad.State
 import Control.Monad.Cont
-import Data.Monoid
-import Control.Applicative
+import Control.Monad.State
 import Data.List
+import Control.Applicative ((<*>), (<$>))
 import Data.List.Split (chunksOf)
+--import Data.Monoid
+--import Data.Ord
 import qualified Data.Map as M
-import Data.Ord
---import Data.Maybe
+import Data.Maybe (mapMaybe)
 --import Debug.Hood.Observe
 --import Debug.Trace
-import Control.Exception (assert)
+--import Control.Exception (assert)
 
 data Ref = Ent (String,Int) | Func {unfunc :: M.Map Ref Stack} --deriving (Eq,Show)
 type Stack = [Ref]
@@ -35,15 +35,19 @@ instance Show Ref where
 
 instance Eq Ref where
   (Ent x) == (Ent y) = x == y
-  _ == _ = False
+  _ == _             = False
 
 instance Ord Ref where
   compare (Ent (name,tag)) (Ent (name',tag')) = compare tag tag'
-  compare _ _ = EQ
+  compare _ _                                 = EQ
 
 
 -- AUXILIARY FUNCTIONS
 -- ===================
+
+-- Backwards function application
+(<|) :: a -> (a -> b) -> b
+a <| b = b a
 
 -- Characteristic set of a property
 characteristic :: (Ref -> Bool) -> Stack
@@ -76,10 +80,6 @@ eval = (`runStateT` [])
 -- ==================
 
 -- First-Order Continuized Application
-
-ret :: a -> Dcont a
-ret = return
-
 lap :: Dcont a -> Dcont (a -> b) -> Dcont b
 -- lap = flip ap (watch out: side effects still flow from function to arg)
 lap m h = do
@@ -87,9 +87,13 @@ lap m h = do
   f <- h
   return $ f x
 
--- First-Order Unit Function
 rap :: Dcont (a -> b) -> Dcont a -> Dcont b
 rap = ap 
+
+-- First-Order Unit Function
+-- ("lift")
+ret :: a -> Dcont a
+ret = return
 
 -- First-Order Lower Function
 -- (overloaded for continuized individuals to make printing easier)
@@ -115,12 +119,13 @@ rrap h m = do
   return $ rap f x
 
 -- Second-Order Unit Function
-rreturn :: Dcont a -> Dcont (Dcont a)
-rreturn f = lap f (return return)
+-- ("internal lift")
+rret :: Dcont a -> Dcont (Dcont a)
+rret f = lap f (return return)
 
 -- Second-Order Lower Function
-lower2 :: Dcont (Dcont a) -> Dcont a
-lower2 outer = cont $ \k -> StateT $ \s -> 
+llower :: Dcont (Dcont a) -> Dcont a
+llower outer = cont $ \k -> StateT $ \s -> 
   runStateT
     ( (runCont outer)
       (\m -> StateT $ \s' ->
@@ -137,10 +142,17 @@ lower2 outer = cont $ \k -> StateT $ \s ->
 -- SIMPLE BINDING
 -- ==============
 
+-- First-Order Push
 up :: E -> E
 up m = cont $ \k ->
   runCont m (\x -> StateT $ \s -> runStateT (k x) (s++[x]))
   --runCont m (\x -> StateT $ \s -> runStateT (k x) (x:s))
+
+-- Second-Order Push
+uup :: Dcont E -> Dcont E
+uup mm = do
+  m <- mm
+  ret (up m)
 
 
 -- THE MODEL AND THE LANGUAGE
@@ -150,11 +162,9 @@ boys, girls, poems, univ :: Stack
 boys  = map (\x -> Ent ("b",x)) [1..6]
 girls = map (\x -> Ent ("g",x)) [1..6]
 poems = map (\x -> Ent ("p",x)) [1..6]
-univ = concat [boys, girls, poems]
+univ  = concat [boys, girls, poems]
 
 -- Proper Names
--- one, two, three, four, five, six, seven, eight, nine, ten :: E
--- [one, two, three, four, five, six, seven, eight, nine, ten] = map return univ
 boy1, boy2, boy3, boy4, boy5, boy6 :: E
 [boy1, boy2, boy3, boy4, boy5, boy6] = map return boys
 
@@ -168,7 +178,9 @@ poem1, poem2, poem3, poem4, poem5, poem6 :: E
 he :: Int -> E
 he n = cont $ \k -> do
   s <- get
-  k (s!!n)
+  let ind = length s - n - 1
+  k (s !! ind)
+-- pronouns count backward
 
 
 -- One-Place Predicates
@@ -189,14 +201,14 @@ triv = return (const True)
 
 
 -- Two-Place Predicates
-matches, envies, listensTo :: EET
+likes, envies, pities, listensTo :: EET
 --[eq, lt, gt] = map return [(==), (>), (<)]
 
--- people match anyone that their "tags" are equal to:
--- b1 matches g1, g3 matches g3, but g5 doesn't match b4 or g4
-matches = let matches' (Ent (_,n)) (Ent (_,m)) = n == m
-              matches' _ _                     = False in
-          return matches'
+-- people like anything that their "tags" are equal to:
+-- b1 likes g1, g3 likes p3, but g5 doesn't like b4 or g4
+likes = let likes' (Ent (_,n)) (Ent (_,m)) = n == m
+            likes' _ _                     = False in
+          return likes'
 
 -- people envy people of the same gender that they are less than:
 -- b1 envies b3, but b3 does not envy b1 nor does he envy g6
@@ -205,12 +217,19 @@ envies = let envies' (Ent (x,n)) (Ent (y,m)) = x == y &&
              envies' _ _                     = False in
           return envies'
 
+pities = let pities' (Ent (x,n)) (Ent (y,m)) = x == y &&
+                                               n < m
+             pities' _ _                     = False in
+          return pities'
+
 -- people listen to people of the opposite gender that they divide evenly:
 -- b2 listens to g6, as does b3, but b4 doesn't, and neither does g2
-listensTo = let lt' (Ent (x,n)) (Ent (y,m)) = x /= y &&
-                                              n `mod` m == 0
+listensTo = let lt' (Ent (x,n)) (Ent (y,m)) =
+                   n `mod` m == 0 && (x == "g" && y == "b"  ||
+                                      x == "b" && y == "g")
                 lt' _ _                     = False in
           return lt'
+
 
 -- Three-Place Predicates
 gave :: EEET
@@ -225,7 +244,7 @@ gave = let gave' (Ent (x,n)) (Ent (y,m)) (Ent (z,o)) =
        return gave'
 
 
--- ET -> ET Adjectives
+-- et -> et Adjectives
 -- ==========================
 
 short, tall :: ETET
@@ -237,6 +256,21 @@ tall = let tall' p e@(Ent (_,n)) = p e && n > 3
            tall' _ _             = False in
        return tall'
 
+-- Abbreviations
+tb,tg,sb,sg :: ET
+tb = rap tall boy
+tg = rap tall girl
+sb = rap short boy
+sg = rap short girl
+
+-- 'ownedBy' approximates English 'of'. It takes two arguments, a nominal
+-- and an individual (the owner). So "book ownedby John" is the set of books
+-- that John owns.
+ownedBy :: Dcont ((Ref -> Bool) -> Ref -> Ref -> Bool)
+ownedBy = let ownedBy' p (Ent (x,n)) e@(Ent (y,m)) =
+                p e && y == "p" && n == m
+              ownedBy' _ _ _                       = False in
+          return ownedBy'
 
 -- ET -> E Quantifiers
 -- ==========================
@@ -245,12 +279,22 @@ tall = let tall' p e@(Ent (_,n)) = p e && n > 3
 check :: ET -> Ref -> Dstate Bool
 check p = lower . rap p . return
 
+-- "bottle" takes an ref x and a stateful bool t, and replaces the (True, s') pairs
+-- in t with (x, s') pairs, and discards the rest; intuitively, it filters t, 
+-- and then "bottles" x up with the various result states:
+--   bottle 3 (\s -> [(T,7:s), (F,8:s), (T,9:s)]) == \s -> [(3,7:s), (3,9:s)]
+-- the only problem is that if x completely fails p, "bottle" returns the
+-- empty individual (\s -> []), which has to swept out later.
+bottle :: Ref -> Dstate Bool -> Dstate Ref
+bottle x t = mfilter id t >> return x
+
 someD :: ET -> E
 someD p  = cont $ \k -> do
   x <- lift univ
   b <- check p x 
   if b then k x else mzero
 
+-- equivalent to someD
 altsomeD :: ET -> E
 altsomeD p = cont $ \k -> do
   let xs = map ((>>) <$> mfilter id . check p <*> return) univ
@@ -268,28 +312,42 @@ everyD :: ET -> E
 everyD p = cont $ \k -> do
   let xs = filter (not . null . eval) $
            map (bottle <*> check p) univ
-           --map ((>>) <$> mfilter id . check p <*> return) univ
-  let ps = map (>>= k) xs
+  let ps = filter (not . null . eval) $
+           -- the line above protects the computation against scope failure,
+           -- as in "Every short boy likes someone he pities", which will
+           -- otherwise fail on Boy1 who doesn't pity anyone. Switch this line
+           -- off to get a more presupposition-failure like semantics
+           map (>>= k) xs
   foldl1 (liftM2 (&&)) ps
-  where bottle x t = mfilter id t >> return x
--- xs here is interesting. it's a sort of
--- stateful characteristic set of p. we could go a step farther, and reduce p
--- to a single Dstate Int, by mapping a state over the list and concatenating
--- the results:
---   p' = foldl1 mplus xs
--- This could then be directly injected into the continuation (p' >>= k), but
--- there would be no way to tell where the contributions of one individual, so
--- it would only be useful for "some"
--- ended and another began 
---
---
--- "bottle" takes an int x and a bool-state t, and replaces the (True, s') pairs
--- in t with (x, s') pairs, and discards the rest; intuitively, it filters t, 
--- and then "bottles" x up with the various result states:
---   bottle 3 (\s -> [(T,7:s), (F,8:s), (T,9:s)]) == \s -> [(3,7:s), (3,9:s)]
--- the only problem is that if x completely fails p, "bottle" returns the
--- empty individual (\s -> []), which has to swept out later. the
--- commented-out line is equivalent
+
+-- Simon's universal; not clear whether the written fragment corresponds to
+-- version 1 (scopeignore) or version 2 (scopeattend)
+everyS :: ET -> E
+everyS p = cont $ \k -> StateT $ \s -> 
+  let xs = concatMap (($ s) . runStateT . (bottle <*> check p)) univ in
+
+  -- This ignores any restrictor elements that come up empty on the nuclear
+  -- scope; it's as if they never mattered; mirrors the behavior of someD
+  let ps = mapMaybe (scopeignore . uncurry (runStateT . k)) xs in
+  concat ps -- helpful to see the results when exploring
+  --[(all (any fst) ps, s)] -- provides the real deterministic answer
+  --
+
+  {- This attends to restrictor elements that come up empty, and considers
+  -- them equivalent to falsity
+  let ps = map (scopeattend . uncurry (runStateT . k)) xs in
+  concat ps -- helpful to see the results when exploring
+            -- But watch out: this ignores restrictor failure
+  --[(all (any fst) ps, s)] -- provides the real deterministic answer
+  -}
+  where scopeignore bs
+          | bs == []  = Nothing
+          | otherwise = Just bs
+        scopeattend bs
+          | bs == []  = [(False, [])] -- this is just to make things clear;
+                                      -- the computation would return False anyway
+                                      -- because "any fst []" == False
+          | otherwise = bs
 
 
 -- ADJECTIVES SENSITIVE TO ACCUMULATION
@@ -298,21 +356,21 @@ different :: ETET
 different = cont $ \k -> do {s <- get; k (\p x -> p x && x `notElem` s)}
 
 longer :: ETET
-longer = cont $ \k -> do {s <- get; k (\p x -> p x && x > maximum s)}
+longer = cont $ \k -> do
+  s <- get
+  k (\p x ->  p x && (null s || x > maximum s))
 
 
 
 -- TEST ZONE AND TEST TERMS
 -- ========================
 
--- Machinery for making functional witnesses. Unfortunately, it can't be
--- rolled into the rest of the semantics until the Stack and Ent types are
--- genrealized
-
+-- Machinery for making functional witnesses 
 skipdist :: [Int] -> Int
 skipdist s =
   let dl = [(s!!n) - (s!!(n-1)) | n <- [1..length s - 1]] in
-  assert ((length . nub) dl == 1) (head dl)
+  -- assert ((length . nub) dl == 1) (head dl)
+  head dl
 
 findAnchors :: [(Bool,Stack)] -> [Int]
 findAnchors alts = map fst $ foldl1 intersect enumStacks
@@ -378,8 +436,11 @@ trialeveryD p = cont $ \k -> StateT $ \s ->
 --pushC :: Int -> Dcont Int
 --pushC n = cont $ \k -> pushS n
 
-up2 :: E -> E
-up2 m = m >>= (\x -> cont $ \k -> do {modify (x:); k x})
+up' :: E -> E
+up' m = m >>= (\x -> cont $ \k -> do {modify (x:); k x})
+
+up'' :: E -> E
+up'' m = m >>= (\x -> cont $ \k -> StateT $ \s -> k x (x:s))
 
 --up3 :: E -> E
 --up3 m = do {x <- m; pushC x}
@@ -392,14 +453,60 @@ emptystate = StateT $ \s -> []
 c :: Int -> Dstate Bool
 c x = lower $ lap (up $ someD leq3) (rap eq (up $ return x))
 
-    
+-}
+
+poss :: E -> ET -> Dcont E
+poss g p = rap (ret someD) (rrap (llap (ret p) (ret ownedBy)) (rret g))
 
 
 -- EXAMPLES
 -- ========
 
--- eval $ lower $ rap geq8 nine
--- let x = eval $ lower $ lap (up $ everyD' (rap tall boy)) (rap matches (up $ someD (rap tall girl)))
--- M.toList $ (unfunc . head . snd) x
+{-
+
+"Boy4 is a tall boy"
+eval $ lower $ rap tb (up boy4)
+
+"Some tall boy likes some tall girl"
+eval $ lower $ lap (up $ someD tb) (rap likes (up $ someD tg))
+
+"Every tall boy likes some tall girl"
+eval $ lower $ lap (up $ everyD tb) (rap likes (up $ someD tg))
+
+"Some tall girl likes every tall boy" (inverse scope)
+eval $ lower $ llower $ llap (ret (up $ someD tg)) (rrap (ret likes) (rret (up $ everyD tb)))
+
+"Some short girl likes herself"
+eval $ lower $ lap (up $ someD sg) (rap likes (up $ he 0))
+
+"Someone liking Boy2 is listens to Girl6"
+eval $ lower $ lap (up $ someD (rap likes boy2)) (rap listensTo girl6)
+
+"Someone envying every tall boy listens to Girl4" (surface scope)
+eval $ lower $ lap (up $ someD (rap envies (up $ everyD tb))) (rap listensTo girl4)
+
+"Someone liking every short boy listens to Girl6" (inverse scope)
+eval $ lower $ llower $ llap (uup (rap (ret someD) (rrap (ret likes) (rret (up $ everyD sb))))) (rrap (ret listensTo) (ret girl6))
+
+"Some short boy pities someone who envies him" (Boy1 drops out)
+eval $ lower $ lap (up $ someD sb) (rap pities (up $ someD (rap envies $ he 0)))
+
+"Every short boy pities someone who envies him" (Boy1 drops out, or presup failure)
+eval $ lower $ lap (up $ everyD sb) (rap pities (up $ someD (rap envies $ he 0)))
+
+"Boy2's poem is short"
+eval $ lower $ llower $ llap (uup $ (up boy2) <| poss $ poem) (rrap (ret short) (ret poem))
+
+"Every short boy's poem is short"
+eval $ lower $ llower $ llap (uup $ (up $ everyD sb) <| poss $ poem) (rrap (ret short) (ret poem))
+
+"Every short boy envies a different tall boy"
+eval $ lower $ lap (up $ everyD sb) (rap envies (up $ someD (rap different tb)))
+
+"Every short boy envies a longer tall girl"
+eval $ lower $ lap (up $ everyD sb) (rap envies (up $ someD (rap longer tb)))
+
+"Every tall boy likes some tall girl" (functionalized)
+let x = eval $ lower $ lap (up $ everyD' (rap tall boy)) (rap likes (up $ someD (rap tall girl))) in M.toList $ (unfunc . head . snd) (x!!5)
 
 -}
