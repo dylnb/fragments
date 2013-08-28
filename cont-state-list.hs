@@ -184,19 +184,16 @@ rreset :: Kappa (Kappa a a) (Kappa a r) -> Kappa (Kappa a r) r'
 rreset = lift . (`runContT` (return . reset))
 -- equivalent to:
 -- rreset mm = ContT $ \k -> do
---   x <- runContT mm (\m -> return (reset m))
---   k x
+--   m <- runContT mm (return . reset)
+--   k m
 
--- equivalent to first-order reset, but with an obligatorily higher type
-rreset' :: Kappa (Kappa a r) (Kappa a r) -> Kappa (Kappa a r) r'
-rreset' = reset
-
-altrreset :: Kappa (Kappa a a) (Kappa a r) -> Kappa (Kappa a r) (Kappa a r)
-altrreset = liftM reset
+altrreset :: Kappa (Kappa a a) (Kappa a r) -> Kappa (Kappa a r) r'
+altrreset = reset . liftM reset
 -- equivalent to:
--- altrreset m = do
---   x <- m
---   unit $ reset x
+-- altrreset mm = ContT $ \k -> do
+--   m <- runContT (mm >>= unit . reset) return
+--   k m
+
 
 -- ===============
 -- ** THE MODEL **
@@ -718,42 +715,65 @@ eval $ up $ reset $ everyD sb
 -- ------------------------------------------------
 -- when the indefinite controls the referent, then the indefinite variables
 -- get summed, in this case the likers
-eval $ reset $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))
--- "rreset" can only apply to a universalish DP if it is first lowered
--- and relifted
-eeval $ rreset $ unit $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))
+eval $ up $ reset $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
+-- "rreset" and "altrreset" can only apply to a universalish DP if it is first
+-- lowered and then relifted; "liftM reset" can be, but it doesn't interact
+-- with binding very well (individual likers always make it to the stack)
+eeval $ uup $ rreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
+eeval $ uup $ altrreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
+eeval $ uup $ (liftM reset) $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
 -- -------------------------------------------------
 
 -- Whole sentences with reset universal DPs
 -- -------------------------------------------------
 -- a plain universal DP, when reset, can satisfy a collective predicate
-eval $ lap (reset $ up $ everyD (rap short poem)) (rap overwhelm girl6)
+eval $ lap (up $ reset $ everyD (rap short poem)) (rap overwhelm girl6)
 -- if not reset, it can't
 eval $ lap (up $ everyD (rap short poem)) (rap overwhelm girl6)
--- even when double-lifted, resetting the universal DP glues it together
+
+-- when a universal is boxed without scope, there are options.
+-- regular "reset" leaves the universal distributive
+eeval $ llap (reset $ unit $ llower $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+-- the recursive rresets collectivize it
 eeval $ llap (rreset $ unit $ llower $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
--- no matter how it's reset
-eval $ lap (reset $ llower $ unit $ everyD (rap short poem)) (rap overwhelm girl6)
--- or how it scopes
-eval $ lap (reset $ llower $ uunit $ everyD (rap short poem)) (rap overwhelm girl6)
+eeval $ llap (altrreset $ unit $ llower $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap ((liftM reset) $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+
+-- same options available to a universal with boxed with scope, except for
+-- "liftM reset", which now leaves things distributive, like regular "reset",
+-- if it isn't first llowered and boxed, like the others
+eeval $ llap (reset $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap ((liftM reset) $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+-- the other recursive rresets still collectivize
+eeval $ llap ((liftM reset) $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap (rreset $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap (altrreset $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+
+
+
 -- -------------------------------------------------
 
 -- Whole sentences with reset [universal > indefinite] DPs
 -- -------------------------------------------------
 -- w/o reset, "Someone liking every short boy listens to Girl6" (inversely
 -- linked) returns True when the boys are assigned to themselves
-eeval $ llap (unit $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
+eeval $ llap (uup $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
 -- but when the subject is reset, it returns False for the same assignment,
 -- because the likers have been summed!
-eeval $ llap (rreset $ unit $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
+eeval $ llap (uup $ rreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
 
--- lowering before resetting produces the same contrast
+-- other ways of resetting produce the same contrast as above.
+-- regular "reset" and immediate "liftM reset" leave things distributive:
 -- returns True for the identity assignment
-eval $ lap (llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rap listensTo girl6)
+eeval $ llap (uup $ reset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
+eeval $ llap (uup $ (liftM reset) $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
+-- recursive resets collectivize:
 -- returns False for the identity assignment
-eval $ lap (reset $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rap listensTo girl6)
+eeval $ llap (uup $ rreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
+eeval $ llap (uup $ altrreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
+eeval $ llap (uup $ (liftM reset) $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))) (rrap (unit listensTo) (unit girl6))
 
--- in contrast, "Someone liking every short boy overwhelm Girl6" (inversely
+-- obversely, "Someone liking every short boy overwhelm Girl6" (inversely
 -- linked) returns False for all assignments, because overwhelm here is
 -- collective in its subject
 eeval $ llap (unit $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rrap (unit overwhelm) (unit girl6))
