@@ -1,11 +1,14 @@
 {-# LANGUAGE TypeFamilies, FlexibleInstances, FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction, TypeSynonymInstances #-}
+{-# LANGUAGE TupleSections #-}
 
 import Control.Monad.Cont
-import Control.Monad.State
+import Control.Monad.Trans.State
 import Data.List
+import qualified Data.Set as S (fromList)
 import Control.Applicative ((<*>), (<$>), (<**>))
 import Data.List.Split (chunksOf)
+import Data.Function (on)
 --import Data.Monoid
 --import Data.Ord
 import qualified Data.Map as M
@@ -19,8 +22,8 @@ import Control.Exception (assert)
 -- =================
 
 data Ent = Atom (String,Int)
-           | Plur {atoms :: [Ent]}
-           | Func {unfunc :: M.Map Ent Stack} --deriving (Eq,Show)
+         | Plur {atoms :: [Ent]}
+         | Func {unfunc :: M.Map Ent Stack}
 type Stack     = [Ent]
 type Dstate    = StateT Stack []
 type Kappa a r = ContT r Dstate a
@@ -35,23 +38,44 @@ type ETET r = Kappa ((Ent -> Bool) -> Ent -> Bool) r
 
 instance Show Ent where
   show (Atom (x,y)) = x ++ show y
-  show (Plur xs)   = foldl (\a b -> a ++ "+" ++ show b) "" xs
-  show _           = show "func"
+  show (Plur xs)    = foldl (\a b -> a ++ "+" ++ show b) "" xs
+  show _            = show "func"
 
 instance Eq Ent where
-  (Atom x) == (Atom y)     = x == y
-  (Plur xs) == (Plur ys) = xs == ys
+  (Atom x)  == (Atom y)  = x == y
+  (Plur xs) == (Plur ys) = S.fromList xs == S.fromList ys
   _ == _                 = False
 
 instance Ord Ent where
   compare (Atom (name,tag)) (Atom (name',tag')) = compare tag tag'
-  compare _ _                                 = EQ
+  compare _ _                                   = EQ
 
+instance Eq a => Eq (Dstate a) where
+  (==)  = (==) `on` run
 
 
 -- ========================
 -- ** MONADIC OPERATIONS **
 -- ========================
+
+-- TESTING
+-- =======
+
+nlift :: Dstate a -> ContT r Dstate a
+nlift = lift
+
+-- klift :: ContT r Dstate a -> ContT r' (ContT r Dstate) a
+klift :: Monad m => ContT r m a -> ContT r' (ContT r m) a
+klift = lift
+-- klift m = ContT $ \g -> m >>= (\x -> g x)
+-- klift m = ContT $ \g -> ContT $ \k -> runContT m (\x -> runContT (g x) k)
+
+klower ::  Monad m => ContT r m r -> m r
+klower = (`runContT` return)
+
+kreset ::  ContT a (ContT r Dstate) a -> ContT r' (ContT r Dstate) a
+kreset = klift . klower
+
 
 -- UNIT (GENERALIZED "LIFT")
 -- ========================
@@ -79,11 +103,11 @@ shift h = ContT $ \k -> lower $ h (lift . k)
 
 -- APPLICATION
 -- ===========
-
-(</>)  = rap
-(<//>) = rrap
-(<\>)  = lap
-(<\\>) = llap
+ 
+(~/~) = rap
+(~//~) = rrap
+(~\~) = lap
+(~\\~) = llap
 
 -- First-Order Continuized Application
 lap :: Kappa a r -> Kappa (a -> b) r -> Kappa b r
@@ -180,20 +204,23 @@ reset = lift . lower
 --   k x
 
 -- Second-Order Reset
-rreset :: Kappa (Kappa a a) (Kappa a r) -> Kappa (Kappa a r) r'
-rreset = lift . (`runContT` (return . reset))
+-- there are options here. we can simply apply "reset" to a two-level tower,
+-- which only resets the outermost layer. or we can apply "liftM reset" (i.e.
+-- "rreset1"), which only resets the innermost layer. or we can apply
+-- "rreset2", which resets them both
+rreset1 :: Kappa (Kappa a a) r' -> Kappa (Kappa a r) r'
+rreset1 = liftM reset
 -- equivalent to:
--- rreset mm = ContT $ \k -> do
+-- rreset1 mm = ContT $ \k -> do
+--   m <- mm
+--   unit $ reset m
+
+rreset2 :: Kappa (Kappa a a) (Kappa a r) -> Kappa (Kappa a r) r'
+rreset2 = reset . liftM reset
+-- equivalent to:
+-- rreset2 mm = ContT $ \k -> do
 --   m <- runContT mm (return . reset)
 --   k m
-
-altrreset :: Kappa (Kappa a a) (Kappa a r) -> Kappa (Kappa a r) r'
-altrreset = reset . liftM reset
--- equivalent to:
--- altrreset mm = ContT $ \k -> do
---   m <- runContT (mm >>= unit . reset) return
---   k m
-
 
 -- ===============
 -- ** THE MODEL **
@@ -204,20 +231,18 @@ altrreset = reset . liftM reset
 
 -- Atomic Individuals
 boys, girls, poems :: Stack
-boys     = map (\x -> Atom ("b",x)) [1..6]
-girls    = map (\x -> Atom ("g",x)) [1..6]
-poems    = map (\x -> Atom ("p",x)) [1..6]
+[boys,girls,poems] =
+  chunksOf 6 [Atom ([x],y) | x <- "bgp", y <- [1..6]]
 
 -- Plural Individuals
-shortboys, shortgirls, shortpoems :: Ent
-shortboys  = Plur $ take 3 boys
-shortgirls = Plur $ take 3 girls
-shortpoems = Plur $ take 3 poems
+shortboys, shortgirls, longpoems :: Ent
+[shortboys,shortgirls,longpoems] =
+  [Plur $ take 3 xs | xs <- [boys,girls,(reverse poems)]]
 
 -- The Domain
 domAtoms, domPlurs, univ :: Stack
 domAtoms = concat [boys, girls, poems]
-domPlurs = [shortboys, shortgirls, shortpoems]
+domPlurs = [shortboys, shortgirls, longpoems]
 univ     = domAtoms ++ domPlurs
 
 -- Link's join/sum connective
@@ -235,12 +260,12 @@ pl p = let p' (Plur xs) = all (any fst . run . check p) xs
 
 -- Some pre-fab Dstate Bools with histories, for testing
 randogirls :: Dstate Bool
-randogirls = msum $ map ((>> return True) . put) $
+randogirls = msum $ map ((>> return True) . modify . flip (++)) $
              map ($ permutations $ take 3 girls) [(!!0), (!!3), (!!4)]
 
-stream2 :: Dstate Bool
-stream2 = randogirls >> modify (concatMap (\(a,b) -> [a,b]) . zip boys)
-                     >> return True
+boygirls :: Dstate Bool
+boygirls = randogirls >> modify (concatMap (\(a,b) -> [a,b]) . zip boys)
+                      >> return True
 
 -- ==================
 -- ** THE LANGUAGE **
@@ -296,10 +321,10 @@ triv = unit (const True)
 -- ------------------------------------------------
 likes, envies, pities, listensTo, overwhelm :: EET r
 
--- people like other people when their indices match:
+-- people like the people they are coindexed with :)
 -- b1 likes g1, g3 likes b3, but g5 doesn't like b4 or g4
-likes = let likes' (Atom (x,n)) (Atom (y,m)) = n == m
-                                               && y /= "p" && x /= "p"
+likes = let likes' (Atom (x,n)) (Atom (y,m)) = n == m &&
+                                               y /= "p"
             likes' _ _                       = False in
         unit likes'
 
@@ -325,10 +350,10 @@ listensTo = let lt' (Atom (x,n)) (Atom (y,m)) =
                 lt' _ _                       = False in
             unit lt'
 
--- +p1+p2+p3 overwhelm g6, and +b1+b2+b3 overwhelm each of b1,b2, and b3;
+-- +p4+p5+p6 overwhelm g1, and +b1+b2+b3 overwhelm each of b1,b2, and b3;
 -- nothing else overwhelms anyone else
 overwhelm = let ow' y xs =
-                  xs == shortpoems && y == girls!!5 ||
+                  xs == longpoems && y == girls!!0 ||
                   xs == shortboys  && y `elem` (take 3 boys) in
             unit ow'
 -- ------------------------------------------------
@@ -350,7 +375,7 @@ gave = let gave' (Atom (x,n)) (Atom (y,m)) (Atom (z,o)) =
 
 -- ADJECTIVES
 -- ==========
-short, tall :: ETET r
+short, tall, long :: ETET r
 short = let short' p e@(Atom (_,n)) = p e && n <= 3
             short' _ _              = False in
         unit short'
@@ -359,10 +384,17 @@ tall = let tall' p e@(Atom (_,n)) = p e && n > 3
            tall' _ _              = False in
        unit tall'
 
+long = let long' p e@(Atom (x,n)) = p e && n > 3 && x == "p"
+           long' _ _              = False in
+       unit long'
+
+
 -- Accumulating Adjectives
 -- ------------------------------------------------
-different, longer :: ETET r
+different, longer, same :: ETET r
 different = ContT $ \k -> do {s <- get; k (\p x -> p x && x `notElem` s)}
+
+same = ContT $ \k -> do {s <- get; k (\p x -> p x && (x `elem` s || s == []))}
 
 longer = ContT $ \k -> do
   s <- get
@@ -379,29 +411,56 @@ sg = rap short girl
 
 -- PREPOSITIONS
 -- ============
--- 'ownedBy' approximates English 'of'. It takes two arguments, a nominal
--- and an individual (the owner). So "book ownedby Boy3" is the set of books
--- that Boy3 owns. As it happens, Boy1 doesn't own any poems.
-ownedBy :: Kappa ((Ent -> Bool) -> Ent -> Ent -> Bool) r
-ownedBy = let ownedBy' p (Atom (x,n)) e@(Atom (y,m)) =
-                p e && y == "p" && n == m && n /= 1
-              ownedBy' _ _ _i                        = False in
-          unit ownedBy'
 
+-- Boys wrote the poems they match,
+-- except for poem1, which was written by girl1
+by :: Kappa (Ent -> (Ent -> Bool) -> Ent -> Bool) r
+by = let by' (Atom (x,n)) p e@(Atom (y,m)) =
+                p e && y == "p" && n == m &&
+                ((x == "b") `xor` (x /= "p" && n == 1))
+         by' _ _ _                         = False in
+     unit by'
+-- the following people wrote the following poems:
+--   Girl1 -- Poem1
+--   Boy4  -- Poem2, Poem3, Poem4
+--   Boy5  -- Poem5
+--   Boy6  -- Poem6
+-- by = let by' (Atom (x,n)) p e@(Atom (y,m)) =
+--                 p e && y == "p" &&
+--                 case (x,n) of
+--                   ("g",1) -> m == 1
+--                   ("b",4) -> m `elem` [2,3,4]
+--                   ("b",5) -> m == 5
+--                   ("b",6) -> m == 6
+--                   (_,_)   -> False
+--          by' _ _ _                         = False in
+--      unit by'
+
+-- 'ownedBy' approximates English 'of'.
+-- people own the poems they wrote
+ownedBy :: Kappa (Ent -> (Ent -> Bool) -> Ent -> Bool) r
+ownedBy = by
 
 -- CONNECTIVES
 -- ===========
 
-class Fusable a where
-  fuse :: a -> a -> a
-instance Fusable Bool where
-  fuse = (&&)
-instance Fusable Ent where
-  fuse = oplus
+class MonadTimes a where
+  mtimes :: a -> a -> a
+instance MonadTimes Bool where
+  mtimes = (&&)
+instance MonadTimes Ent where
+  mtimes = oplus
+instance (Monad m, MonadTimes a) => MonadTimes (m a) where
+  mtimes = liftM2 mtimes
 
-conj :: (Monad m, Fusable r) => m r -> m r -> m r
-conj = liftM2 fuse
+conj :: MonadTimes m => m -> m -> m
+conj = mtimes
 
+disj :: MonadPlus m => m a -> m a -> m a
+disj = mplus
+
+mproduct :: (Monad m, MonadTimes a) => [m a] -> m a
+mproduct = foldl1 conj
 
 -- DETERMINERS
 -- ===========
@@ -441,32 +500,41 @@ someD = lift . msum . charact
 --   if b then k x else mzero
 -- equivalent to:
 -- someD p = ContT $ \k -> do
---   let xs =  charact p
+--   let xs = charact p
 --   let ps = map (k =<<) xs
 --   foldl1 mplus ps
 --   -- equivalent to:
 --   -- (msum xs) >>= k
+
+twoD :: ET Bool -> E r
+twoD p = lift $ msum $
+  nub [x `conj` y | x <- charact p, y <- charact p, ((/=) `on` run) x y]
 -- ------------------------------------------------
- 
+
 -- Universals
 -- ------------------------------------------------
-everyD :: Fusable r => ET Bool -> E r
+everyD :: MonadTimes r => ET Bool -> E r
 everyD p = ContT $ \k -> do
   let xs = filter (not . null . run) $
            -- flushes out individuals that completely fail the restrictor, 
            -- but explodes if the restrictor contains pronouns :(
            charact p
-  let ps = filter (not . null . run) $
+  let ps = -- filter (not . null . run) $
            -- the line above protects the computation against scope failure, 
            -- as in "Every short boy likes someone he pities", which will
            -- otherwise fail on Boy1 who doesn't pity anyone. Comment this
            -- line out off to get a more presupposition-failure like semantics
            map (k =<<) xs
   foldl1 conj ps
+-- essentially equivalent to:
+--   everyD = lift . mproduct . charact
+-- but with handlers for empty individuals
+
+test = liftCatch
 
 -- a towerish version of everyD
 -- shows slightly different behavior when "different" is in a restrictor
-alteveryD :: ET Bool -> E Bool
+alteveryD :: MonadTimes r => ET Bool -> E r
 alteveryD p = ContT $ \k -> StateT $ \s ->
   let witnesses x = filter fst $ runStateT (check p x) s in
   let ps = filter (not . null . (`runStateT` s)) $
@@ -474,9 +542,11 @@ alteveryD p = ContT $ \k -> StateT $ \s ->
                                                  | (_,s'') <- witnesses x]) domAtoms in
   runStateT (foldl1 conj ps) s
 
--- externally static version of everyD
-everyS' :: ET Bool -> E Bool
-everyS' = mapContT (\m -> do {s <- get; mapStateT (\ts -> [(any fst ts, s)]) m}) . everyD
+-- externally static (possibly deterministic) version of everyD
+everyS' :: MonadTimes r => ET Bool -> E r
+-- everyS' :: ET Bool -> E Bool
+everyS' = mapContT (\m -> do {s <- get; mapStateT ((,s) . fst <$>) m}) . everyD
+-- everyS' = mapContT (\m -> do {s <- get; mapStateT (\ts -> [(any fst ts, s)]) m}) . everyD
 -- equivalent to:
 -- everyS' p = ContT $ \k -> StateT $ \s -> [(or $ evalStateT (runContT (everyD p) k) s, s)]
 
@@ -514,7 +584,7 @@ everyS p = ContT $ \k -> StateT $ \s ->
 -- Possessives
 -- ------------------------------------------------
 poss :: E r -> ET Bool -> Kappa (E r) r
-poss g p = rap (unit someD) (rrap (llap (unit p) (unit ownedBy)) (uunit g))
+poss g p = rap (unit someD) (llap (unit p) (rrap (unit ownedBy) (uunit g)))
 -- ------------------------------------------------
 
 
@@ -573,6 +643,10 @@ findAnchs indices = (maximumBy (comparing length) parts)
 (<$) :: a -> (a -> b) -> b
 a <$ b = b a
 
+-- Exclusive disjunction
+xor :: Bool -> Bool -> Bool
+x `xor` y = (x || y) && (not (x && y))
+
 -- Stack difference
 -- (this only makes sense if stacks are guaranteed not to diverge in the
 -- course of a computation)
@@ -600,10 +674,10 @@ BASIC SENTENCES
 ===============
 
 "Boy4 is a tall boy"
-eval $ (up boy4) <\> tb
+eval $ lap (up boy4) tb
 
 "Some tall boy likes some tall girl"
-eval $ (up $ someD tb) <\> (likes </> (up $ someD tg))
+eval $ lap (up $ someD tb) (likes </> (up $ someD tg))
 
 "Every tall boy likes some tall girl"
 eval $ lap (up $ everyD tb) (rap likes (up $ someD tg))
@@ -626,14 +700,14 @@ eeval $ llap (uup (rap (unit someD) (rrap (unit likes) (uup $ uunit $ everyD sg)
 "Some short boy pities someone who envies him" (Boy1 drops out)
 eval $ lap (up $ someD sb) (rap pities (up $ someD (rap envies $ he 0)))
 
-"Every short boy pities someone who envies him" (Boy1 drops out, or presup failure)
+"Every short boy pities someone who envies him" (Boy1 drops out, or failure)
 eval $ lap (up $ everyD sb) (rap pities (up $ someD (rap envies $ he 0)))
 
-"Boy2's poem is short"
-eeval $ llap (uup $ (up boy2) <$ poss $ poem) (rrap (unit short) (unit poem))
+"Boy5's poem is long"
+eeval $ llap (uup $ (up boy5) <$ poss $ poem) (rrap (unit long) (unit poem))
 
-"Boy2's poem is owned by him"
-eeval $ llap ((up boy2) <$ poss $ poem) (rrap (llap (unit poem) (unit ownedBy)) (uunit $ he 0))
+"Boy5's poem is owned by him"
+eeval $ llap ((up boy5) <$ poss $ poem) (llap (unit poem) (rrap (unit ownedBy) (uunit $ he 0)))
 
 "Every short boy's poem is short" (Boy1 drops out: narrowing)
 eeval $ llap (uup $ (up $ everyD sb) <$ poss $ poem) (rrap (unit short) (unit poem))
@@ -664,12 +738,11 @@ eeval $ llap (unit $ up $ he 0) (rrap (unit likes) (uunit $ up $ someD sg))
 
 "A different tall boy pities every short boy" (inv scope)
 -- with complicated llower, 'different' doesn't do anything in any of these sentences :(
+-- but with simple llower, they all come out fine
 eeval $ llap (uup $ unit $ someD (rap different tb)) (rrap (unit pities) (uup $ uunit $ everyD sb))
 eeval $ llap (unit $ up $ someD (rap different tb)) (rrap (unit pities) (uup $ uunit $ everyD sb))
-eeval $ llap (uup $ unit $ someD (rap different tb)) (rrap (unit envies) (uunit $ up $ everyD sb))
-eeval $ llap (unit $ up $ someD (rap different tb)) (rrap (unit envies) (uunit $ up $ everyD sb))
--- but with simple llower, the first two sentences work perfectly :)
--- again, "uup $ uunit" is better than "uunit $ up"
+eeval $ llap (uup $ unit $ someD (rap different tb)) (rrap (unit pities) (uunit $ up $ everyD sb))
+eeval $ llap (unit $ up $ someD (rap different tb)) (rrap (unit pities) (uunit $ up $ everyD sb))
 
 
 -- This has nothing to do with crossover, but it might provide a clue:
@@ -695,9 +768,10 @@ eeval $ llap (uup $ unit $ someD sb) (rrap (unit likes) (uunit $ up $ everyD sg)
 -- Type T sentences
 -- ------------------------------------------------
 -- returns False (equal to "Every short boy is a boy and pities b2")
-eval $ conj (lap (up $ everyS' sb) boy)  (lap (he 0) (rap pities boy2))
+eval $ conj (lap (up $ everyS' sb) boy) (lap (he 0) (rap pities boy2))
 -- presupposition failure (equal to "Every short boy is a boy. He pities b2")
-eval $ conj (reset $ lap (up $ everyS' sb) boy)  (lap (he 0) (rap pities boy2))
+eeval $ conj (uunit $ reset $ lap (up $ everyS' sb) boy)  (llap (uunit $ he 0) (rrap (unit pities) (unit boy2)))
+eeval $ conj (rreset2 $  llap (uup $ uunit $ everyS' sb) (unit boy))  (llap (uunit $ he 0) (rrap (unit pities) (unit boy2)))
 
 -- returns False for b1 and b2, but True for b3
 eval $ conj (lap (up $ someD sb) boy)  (lap (he 0) (rap pities boy2))
@@ -715,41 +789,43 @@ eval $ up $ reset $ everyD sb
 -- ------------------------------------------------
 -- when the indefinite controls the referent, then the indefinite variables
 -- get summed, in this case the likers
-eval $ up $ reset $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
--- "rreset" and "altrreset" can only apply to a universalish DP if it is first
--- lowered and then relifted; "liftM reset" can be, but it doesn't interact
--- with binding very well (individual likers always make it to the stack)
-eeval $ uup $ rreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
-eeval $ uup $ altrreset $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
-eeval $ uup $ (liftM reset) $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
+eeval $ uup $ reset $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
+eeval $ uup $ rreset2 $ rap (unit someD) (rrap (unit likes) (uup (uunit $ everyD sb)))
+
+-- for some reason, resets don't effectively kill off "everyS'"'s binding
+-- potential in these inverse linking cases, unless either
+--   (i) "everyS'" is bound below its "uunit" (which is generally bad)
+--   (ii) the whole host DP is lowered first
+eeval $ uup $ rreset2 $ rap (unit someD) (rrap (unit likes) (uup $ uunit $ everyS' sb))
+eeval $ uup $ rreset2 $ unit $ llower $ rap (unit someD) (rrap (unit likes) (uup $ uunit $ everyS' sb))
 -- -------------------------------------------------
 
 -- Whole sentences with reset universal DPs
 -- -------------------------------------------------
 -- a plain universal DP, when reset, can satisfy a collective predicate
-eval $ lap (up $ reset $ everyD (rap short poem)) (rap overwhelm girl6)
+eval $ lap (up $ reset $ everyD (rap long poem)) (rap overwhelm girl1)
 -- if not reset, it can't
-eval $ lap (up $ everyD (rap short poem)) (rap overwhelm girl6)
+eval $ lap (up $ everyD (rap long poem)) (rap overwhelm girl6)
 
 -- when a universal is boxed without scope, there are options.
 -- regular "reset" leaves the universal distributive
-eeval $ llap (reset $ unit $ llower $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap (reset $ unit $ llower $ unit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
 -- the recursive rresets collectivize it
-eeval $ llap (rreset $ unit $ llower $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
-eeval $ llap (altrreset $ unit $ llower $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
-eeval $ llap ((liftM reset) $ unit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap (rreset $ unit $ llower $ unit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
+eeval $ llap (altrreset $ unit $ llower $ unit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
+eeval $ llap ((liftM reset) $ unit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
 
 -- same options available to a universal with boxed with scope, except for
 -- "liftM reset", which now leaves things distributive, like regular "reset",
 -- if it isn't first llowered and boxed, like the others
-eeval $ llap (reset $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
-eeval $ llap ((liftM reset) $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap (reset $ unit $ llower $ uunit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
+eeval $ llap ((liftM reset) $ uunit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
 -- the other recursive rresets still collectivize
-eeval $ llap ((liftM reset) $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
-eeval $ llap (rreset $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
-eeval $ llap (altrreset $ unit $ llower $ uunit $ everyD (rap short poem)) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap ((liftM reset) $ unit $ llower $ uunit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
+eeval $ llap (rreset $ unit $ llower $ uunit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
+eeval $ llap (altrreset $ unit $ llower $ uunit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
 
-
+eeval $ llap (rr $ unit $ llower $ uunit $ everyD (rap long poem)) (rrap (unit overwhelm) (unit girl1))
 
 -- -------------------------------------------------
 
@@ -776,10 +852,10 @@ eeval $ llap (uup $ (liftM reset) $ unit $ llower $ rap (unit someD) (rrap (unit
 -- obversely, "Someone liking every short boy overwhelm Girl6" (inversely
 -- linked) returns False for all assignments, because overwhelm here is
 -- collective in its subject
-eeval $ llap (unit $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rrap (unit overwhelm) (unit girl6))
--- returns True when the boys are assigned to poems, because together +p1+p2+p3
--- overwhelm Girl6
-eeval $ llap (rreset $ unit $ llower $ uup $ rap (unit someD) (rrap (unit likes) (uunit (up $ everyD sb)))) (rrap (unit overwhelm) (unit girl6))
+eeval $ llap (uup $ reset $ unit $ llower $ rap (unit someD) (llap (unit poem) (rrap (unit ownedBy) (uup (uunit $ everyD tb))))) (rrap (unit overwhelm) (unit girl1))
+-- returns True when the boys are assigned to poems, because together +p4+p5+p6
+-- overwhelm Girl1
+eeval $ llap (uup $ reset $ rap (unit someD) (llap (unit poem) (rrap (unit ownedBy) (uup (uunit $ everyD tb))))) (rrap (unit overwhelm) (unit girl1))
 -- ------------------------------------------------
 
 -- Resets and binding
