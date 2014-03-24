@@ -2,24 +2,29 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
 -- mashup of Brasoveanu 2011 with de Groote 2007
-import Debug.Trace
-import Data.List
-import Data.Maybe
-import Control.Monad
 
-type Ent = Char
+import Debug.Trace
+import Data.List (nub, subsequences, intersperse)
+import Data.Maybe
+import Control.Applicative
+import Data.Traversable (sequenceA)
+
+data Ent = Atom Char
+         | Plur [Ent] deriving Eq
+
 type Stack = [Ent]
 type Stackset = [Stack]
 type Continuation = Stackset -> Bool
 type Prop = Stackset -> Continuation -> Bool
 type GQ = (Int -> Prop) -> Prop
 
-ins :: Int -> Ent -> Stack -> Stack
-ins 0 x i = x:i
-ins n x (a:i) = a:(ins (n - 1) x i)
 
-[a,b,c,d,e,f] = "abcdef"
-domain = [a,b,c,d,e,f]
+-- Print functions, Convenienve definitions
+-- =====================================
+
+getEnts :: Ent -> [Ent]
+getEnts s@(Atom _) = [s]
+getEnts   (Plur y) = y
 
 trivial :: Continuation
 trivial i = True
@@ -27,8 +32,11 @@ trivial i = True
 eval :: Prop -> Bool
 eval s = s [[]] trivial
 
+instance Show Ent where
+  show y = intersperse '+' $ getEnts y >>= (\(Atom x) -> [x])
+
 characteristic_set :: (Int -> Prop) -> [Ent]
-characteristic_set p = [x | (x,n) <- zip domain [0..], p n [domain] trivial]
+characteristic_set p = [x | (x,n) <- zip atoms [0..], p n [atoms] trivial]
 
 instance Show (Int -> Prop) where
   show p = show $ characteristic_set p 
@@ -36,16 +44,74 @@ instance Show (Int -> Prop) where
 characteristic_sets :: GQ -> [[Ent]]
 characteristic_sets g =
   map (\h -> characteristic_set h) funcs
-    where powerset = \xs -> filterM (\x -> [True, False]) xs
-          p_sets = (powerset domain) \\ [""]
-          fn xs = (\n is k -> (is!!0!!n) `elem` xs && (k is))
-          funcs = filter (eval . g) (map fn p_sets)
+    where fn y  = \n is k -> (is!!0!!n) `elem` getEnts y
+          funcs = filter (eval . g . ast) (map fn domain)
 
 instance Show ((Int -> Prop) -> Prop) where
   show g = show $ characteristic_sets g
 
+
+-- Populate the domain
+-- ===================================
+[a,b,c,d,e,f] = map Atom "abcdef"
+atoms = [a,b,c,d,e,f]
+
+plurs = map Plur [xs | xs <- subsequences atoms, length xs > 1]
+
+domain = atoms ++ plurs
+
+
+-- Basic operations on individuals
+-- ==================================== 
+
+-- turn a sum into a column vector
+open_up :: Ent -> Stackset
+open_up (x@(Atom _)) = [[x]]
+open_up (   Plur y ) = sequenceA [y]
+
+-- fuse a list of individuals into one (possibly) sum individual
+join :: [Ent] -> Ent
+join is | length ls > 1   = Plur ls
+        | otherwise       = head ls
+  where simpleAdd []              = []
+        simpleAdd (x@(Atom _):is) = x:(simpleAdd is)
+        simpleAdd (  (Plur i):is) = i ++ (simpleAdd is)
+        ls = (nub . simpleAdd) is 
+
+-- Link's maximal individual
+top :: (Int -> Prop) -> Ent
+top p = join (characteristic_set p)
+
+-- "asterisk", Link's all-inclusive pluralizer
+ast :: (Int -> Prop) -> Int -> Prop
+ast p n (i1:i2:is) k = fn && (ast p n (i2:is) k)
+  where fn | i1!!n `elem` atoms  = p n [i1] k
+           | otherwise           = p 0 (open_up (i1!!n)) k
+ast p n (i1:is) k = fn
+  where fn | i1!!n `elem` atoms = p n [i1] k
+           | otherwise          = p 0 (open_up (i1!!n)) k
+
+-- plurals only
+pl :: (Int -> Prop) -> Int -> Prop
+pl p n is k | not $ any (\i -> i!!n `elem` atoms) is  = ast p n is k
+            | otherwise                               = False
+
+
+-- Basic operations on stacks
+-- ===============================
+
+ins :: Int -> Ent -> Stack -> Stack
+ins 0 x i = x:i
+ins n x (a:i) = a:(ins (n - 1) x i)
+
+
+
+-- Interpretations
+-- =================================
+
+
 john :: (Int -> Prop) -> Prop
-john p is k = p 0 (map (\i -> a:i) is) k
+john p is k = p 0 (map (a:) is) k
 
 he :: Int -> (Int -> Prop) -> Prop
 he n p is k = p n is k
@@ -65,8 +131,8 @@ conj left right is k = left is (\is' -> right is' k)
 
 every n res scope is k = 
   let fn x y = concat (map (\i -> [ins n x i, ins n y i]) is) in
-    (and [conj (res n) (scope n) (fn x y) trivial
-           | x <- domain, y <- domain, x /= y, res n (fn x y) trivial])
+    and [conj (res n) (scope n) (fn x y) trivial
+           | x <- domain, y <- domain, x /= y, res n (fn x y) trivial]
     && (k is)
 
 -- given stackset [i1, i2, ..., im], test whether there exist x1, x2, ..., xm
@@ -141,3 +207,5 @@ same index nom m = conj (nom m) (\is -> \k -> ((is!!0)!!m) == ((is!!index)!!m) &
 
 -- Every boy enjoyed a same poem:
 -- eval((every 0 boy) (\x -> (indef 1 (same 1 poem)) (\y -> enjoy y x))) == True
+
+
