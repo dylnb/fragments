@@ -68,7 +68,7 @@ characteristic p = filter p univ
 -- Stack difference
 -- (this only makes sense if stacks are guaranteed not to diverge)
 minus :: Stack -> Stack -> Stack
-s1 `minus` s2 = take ((length s1) - (length s2)) s1
+s1 `minus` s2 = take (length s1 - length s2) s1
 
 -- Normal pop operation for stacks
 pop :: Dstate Ref
@@ -151,7 +151,7 @@ rret f = lap f (return return)
 llower :: K (K a t) t -> K a t
 llower outer = cont $ \k -> StateT $ \s -> 
   runStateT
-    ( (runCont outer)
+    ( runCont outer
       (\m -> StateT $ \s' ->
         runStateT
           (runCont m
@@ -196,7 +196,7 @@ reset m = cont $ \k -> do
 -- Second-Order Reset
 rreset :: K (K a a) (K a t) -> K (K a t) t'
 rreset mm = cont $ \k -> do
-  x <- runCont mm (\m -> return (reset m))
+  x <- runCont mm (return . reset)
   k x
 
 -- THE MODEL AND THE LANGUAGE
@@ -355,7 +355,7 @@ someD p  = cont $ \k -> do
 altsomeD :: ET' Bool -> E' t
 altsomeD p = cont $ \k -> do
   let xs = map ((>>) <$> mfilter id . check p <*> return) univ
-  (foldl1 mplus xs) >>= k
+  foldl1 mplus xs >>= k
   
 -- almost right, but doesn't pass referents from restr to scope 
 --simpleeveryD :: ET -> E
@@ -408,10 +408,10 @@ everyS p = cont $ \k -> StateT $ \s ->
   --[(all (any fst) ps, s)] -- provides the real deterministic answer
   -}
   where scopeignore bs
-          | bs == []  = Nothing
+          | null bs   = Nothing
           | otherwise = Just bs
         scopeattend bs
-          | bs == []  = [(False, [])] -- this is just to make things clear;
+          | null bs   = [(False, [])] -- this is just to make things clear;
                                       -- the computation would return False anyway
                                       -- because "any fst []" == False
           | otherwise = bs
@@ -472,11 +472,13 @@ everyD' = mapCont functionalize . everyD
 
 -- some pre-fab Dstate Bools with histories, for testing
 randogirls :: Dstate Bool
-randogirls = msum $ map ((>> return True) . put) $
-  map ($ permutations $ take 3 girls) [(!!0), (!!3), (!!4)]
+randogirls = msum $
+  map ((>> return True) . put . ($ permutations $ take 3 girls)) choices
+  where choices = [(!! 0), (!! 3), (!! 4)]
 
 stream2 :: Dstate Bool
-stream2 = randogirls >> modify (concatMap (\(a,b) -> [a,b]) . zip boys) >> return True
+stream2 = randogirls >> modify (concatMap (\(a,b) -> [a,b]) . zip boys)
+                     >> return True
 
 oplus :: Ref -> Ref -> Ref
 oplus x@(Ent _)  (Plur ys) = Plur (x:ys)
