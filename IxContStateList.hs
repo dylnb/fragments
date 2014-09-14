@@ -1,67 +1,15 @@
-{-# LANGUAGE RebindableSyntax, NoImplicitPrelude #-}
+{-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE TypeFamilies, FlexibleInstances, FlexibleContexts #-}
 {-# LANGUAGE NoMonomorphismRestriction, TypeSynonymInstances #-}
 
+import IxPrelude
 import Control.Monad.Indexed
 import Control.Monad.Indexed.State
 import Control.Monad.Indexed.Cont
 import Control.Monad.Indexed.Trans
 import Data.List (permutations, transpose)
-import Data.Functor.Identity
 import Control.Exception (assert)
 import Prelude hiding (Monad(..))
-
-(>>=) :: IxMonad m => m i j a -> (a -> m j k b) -> m i k b
-ixmon >>= k = ibind k ixmon
-
-return :: IxPointed m => a -> m i i a
-return = ireturn
-
-(>>) :: IxMonad m => m i j a -> m j k b -> m i k b
-ixmon >> ixmon' = ixmon >>= const ixmon'
-
-fail :: IxMonad m => m i j a
-fail = fail
-
--- runContT :: IxContT m r o a -> (a -> m o) -> m r
--- runContT = runIxContT
-
--- runStateT :: IxStateT m i j a -> i -> m (a,j)
--- runStateT = runIxStateT
-
-modify :: IxMonadState m => (i -> j) -> m i j ()
-modify = imodify
-
-gets :: IxMonadState m => (i -> a) -> m i i a
-gets = igets
-
-ixcont :: ((a -> o) -> r) -> IxCont r o a
-ixcont m = IxCont $ IxContT $ \k -> Identity $ m (\x -> runIdentity $ k x)
-
-lift :: D a -> K (D r) (D r) a
-lift m = ixcont $ \k -> m --@ k
-
-liftM :: IxMonad m => (t -> b) -> m i k t -> m i k b
-liftM f m = do x <- m
-               return (f x)
-
-liftM2 :: IxMonad m => (t -> t1 -> b) -> m i j t -> m j k t1 -> m i k b
-liftM2 f m1 m2 = do x1 <- m1
-                    x2 <- m2
-                    return (f x1 x2)
-
-mplus :: IxMonadPlus m => m i j a -> m i j a -> m i j a
-mplus = implus
-
-mzero :: IxMonadZero m => m i j a
-mzero = imzero
-
-ifThenElse :: Bool -> t -> t -> t
-ifThenElse e1 e2 e3 = case e1 of True -> e2; _ -> e3
-
-guard :: IxMonadZero m => Bool -> m i i ()
-guard b = if b then return () else imzero
-
 
 -- =================
 -- ** TYPE SYSTEM ** 
@@ -72,18 +20,15 @@ data Ent = Atom (String,Int)
 
 type Stack   = [Ent]
 type D       = IxStateT [] Stack Stack -- D a := s -> [(a,s)]
--- type K r o a = IxContT D r o a -- K r o a := (a -> D o) -> D r
-                               --         == (a -> s -> [(r,s)]) -> s -> [(r,s)]
+type K       = IxCont
 
-type K = IxCont
-
-type E r    = K r r Ent
-type T r    = K r r Bool
-type ET r   = K r r (Ent -> Bool)
-type EET r  = K r r (Ent -> Ent -> Bool)
-type EEET r = K r r (Ent -> Ent -> Ent -> Bool)
-type ETE r  = K r r ((Ent -> Bool) -> Ent)
-type ETET r = K r r ((Ent -> Bool) -> Ent -> Bool)
+type E r     = K r r Ent
+type T r     = K r r Bool
+type ET r    = K r r (Ent -> Bool)
+type EET r   = K r r (Ent -> Ent -> Bool)
+type EEET r  = K r r (Ent -> Ent -> Ent -> Bool)
+type ETE r   = K r r ((Ent -> Bool) -> Ent)
+type ETET r  = K r r ((Ent -> Bool) -> Ent -> Bool)
 
 instance Show Ent where
   show (Atom (x,y)) = x ++ show y
@@ -115,6 +60,12 @@ unit = return
 -- ignoring type constructors:
 -- m --@ f = \s -> concat [f x s' | (x,s') <- m s]
 infixl 1 --@
+
+-- 'lift' is semantically equivalent to (--@),
+-- but with type constructors that will support various monad class functions
+-- including do-notation
+lift :: D a -> K (D b) (D b) a
+lift m = ixcont $ \k -> m --@ k
 
 
 -- SCOPE SHIFTERS
@@ -598,9 +549,7 @@ poss g p = pure some ~\\~ ((pure p ~\\~ pure ownedBy) ~//~ ppure g)
 -- ** EXAMPLES **
 -- ==============
 
-{- PROBABLY ALL IN NEED OF ADJUSTMENT
- -
- - DON'T TRUST
+{-
 
 BASIC SENTENCES
 ===============
@@ -610,193 +559,5 @@ eval $ up b4 ~\~ tb
 
 "Some tall boy likes some tall girl"
 eval $ (up $ res $ some ~\~ tb) ~\~ (likes ~/~ (up $ res $ some ~\~ tg))
-
-"Every tall boy likes some tall girl"
-eval $ lap (up $ everyD tb) (rap likes (up $ someD tg))
-
-"Some tall girl likes every tall boy" (inverse scope)
-eeval $ llap (uup $ pure $ someD tg) (rrap (pure likes) (uup $ ppure $ everyD tb))
-
-"Some short girl likes herself"
-eval $ lap (up $ someD sg) (rap likes (up $ he 0))
-
-"Someone liking Boy2 listens to Girl6"
-eval $ lap (up $ someD (rap likes boy2)) (rap listensTo girl6)
-
-"Someone envying every tall boy listens to Girl4" (surface scope)
-eval $ lap (up $ someD (rap envies (up $ everyD tb))) (rap listensTo girl4)
-
-"Someone liking every short girl listens to Girl6" (inverse scope)
-eeval $ llap (uup (rap (pure someD) (rrap (pure likes) (uup $ ppure $ everyD sg)))) (rrap (pure listensTo) (pure girl6))
-
-"Some short boy pities someone who envies him" (Boy1 drops out)
-eval $ lap (up $ someD sb) (rap pities (up $ someD (rap envies $ he 0)))
-
-"Every short boy pities someone who envies him" (Boy1 drops out, or presup failure)
-eval $ lap (up $ everyD sb) (rap pities (up $ someD (rap envies $ he 0)))
-
-"Boy2's poem is short"
-eeval $ llap (uup $ (up boy2) <$ poss $ poem) (rrap (pure short) (pure poem))
-
-"Boy2's poem is owned by him"
-eeval $ llap ((up boy2) <$ poss $ poem) (rrap (llap (pure poem) (pure ownedBy)) (ppure $ he 0))
-
-"Every short boy's poem is short" (Boy1 drops out: narrowing)
-eeval $ llap (uup $ (up $ everyD sb) <$ poss $ poem) (rrap (pure short) (pure poem))
-
-"Every short boy envies a different tall boy"
-eval $ lap (up $ everyD sb) (rap envies (up $ someD (rap different tb)))
-
-"Every short boy envies a longer tall girl"
-eval $ lap (up $ everyD sb) (rap envies (up $ someD (rap longer tg)))
-
-"Every tall boy likes some tall girl" (functionalized)
-let x = eval $ lap (up $ everyD' (rap tall boy)) (rap likes (up $ someD (rap tall girl))) in M.toList $ (unfunc . head . snd) (x!!5)
-
-
--- CROSSOVER
--- =========
-
--- moral of the story:
--- the simple algebraic llower (= join) still derives crossover facts, as long
--- as binding happens after lifting: "uup $ ppure", rather than "ppure $ up"
--- (see also the reset examples with binding)
-
-"Herself likes some short girl" (presup failure w/ both llowers!)
-eeval $ llap (uup $ pure $ he 0) (rrap (pure likes) (uup $ ppure $ someD sg))
-
-"Herself likes some short girl" (presup failure only w/ complicated llower)
-eeval $ llap (pure $ up $ he 0) (rrap (pure likes) (ppure $ up $ someD sg))
-
-"A different tall boy pities every short boy" (inv scope)
--- with complicated llower, 'different' doesn't do anything in any of these sentences :(
-eeval $ llap (uup $ pure $ someD (rap different tb)) (rrap (pure pities) (uup $ ppure $ everyD sb))
-eeval $ llap (pure $ up $ someD (rap different tb)) (rrap (pure pities) (uup $ ppure $ everyD sb))
-eeval $ llap (uup $ pure $ someD (rap different tb)) (rrap (pure envies) (ppure $ up $ everyD sb))
-eeval $ llap (pure $ up $ someD (rap different tb)) (rrap (pure envies) (ppure $ up $ everyD sb))
--- but with simple llower, the first two sentences work perfectly :)
--- again, "uup $ ppure" is better than "ppure $ up"
-
-
--- This has nothing to do with crossover, but it might provide a clue:
---
--- with complicated llower, the first two sentences here end up with normal
--- funtional stacklists:
---   e.g. (True, [b3,g3,b2,g2,b1,g1])
--- but the latter two sentences end up with hourglass stacklists:
---   e.g. (True, [b3,b2,b1,g1,g2,g3])
-eeval $ llap (pure $ up $ someD sb) (rrap (pure likes) (uup $ ppure $ everyD sg))
-eeval $ llap (uup $ pure $ someD sb) (rrap (pure likes) (uup $ ppure $ everyD sg))
-eeval $ llap (pure $ up $ someD sb) (rrap (pure likes) (ppure $ up $ everyD sg))
-eeval $ llap (uup $ pure $ someD sb) (rrap (pure likes) (ppure $ up $ everyD sg))
--- with simple llower, all of the sentences are yield functional stacklists,
--- but the order of the pairs depends on the order of binding and lifting
---   e.g. (True, [b1,g1,b2,g2,b3,g3])
---   e.g. (True, [g1,b1,g2,b2,g3,b3])
-
-
--- RESET
--- =====
-
--- Type T sentences
--- ------------------------------------------------
--- returns False (equal to "Every short boy is a boy and pities b2")
-eval $ conj (lap (up $ everyS' sb) boy)  (lap (he 0) (rap pities boy2))
--- presupposition failure (equal to "Every short boy is a boy. He pities b2")
-eval $ conj (reset $ lap (up $ everyS' sb) boy)  (lap (he 0) (rap pities boy2))
-
--- returns False for b1 and b2, but True for b3
-eval $ conj (lap (up $ someD sb) boy)  (lap (he 0) (rap pities boy2))
--- reset makes no difference; still False for b1 and b2, True for b3
-eval $ conj (reset $ lap (up $ someD sb) boy)  (lap (he 0) (rap pities boy2))
--- ------------------------------------------------
-
--- Type E universal descriptions
--- ------------------------------------------------
--- reset universal E-type DPs results in sum individuals
-eval $ up $ reset $ everyD sb
--- ------------------------------------------------
-
--- Type E universal > indefinite descriptions
--- ------------------------------------------------
--- when the indefinite controls the referent, then the indefinite variables
--- get summed, in this case the likers
-eval $ up $ reset $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))
--- "rreset" and "altrreset" can only apply to a universalish DP if it is first
--- lowered and then relifted; "liftM reset" can be, but it doesn't interact
--- with binding very well (individual likers always make it to the stack)
-eeval $ uup $ rreset $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))
-eeval $ uup $ altrreset $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))
-eeval $ uup $ (liftM reset) $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))
--- -------------------------------------------------
-
--- Whole sentences with reset universal DPs
--- -------------------------------------------------
--- a plain universal DP, when reset, can satisfy a collective predicate
-eval $ lap (up $ reset $ everyD (rap short poem)) (rap overwhelm girl6)
--- if not reset, it can't
-eval $ lap (up $ everyD (rap short poem)) (rap overwhelm girl6)
-
--- when a universal is boxed without scope, there are options.
--- regular "reset" leaves the universal distributive
-eeval $ llap (reset $ pure $ llower $ pure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
--- the recursive rresets collectivize it
-eeval $ llap (rreset $ pure $ llower $ pure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-eeval $ llap (altrreset $ pure $ llower $ pure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-eeval $ llap ((liftM reset) $ pure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-
--- same options available to a universal with boxed with scope, except for
--- "liftM reset", which now leaves things distributive, like regular "reset",
--- if it isn't first llowered and boxed, like the others
-eeval $ llap (reset $ pure $ llower $ ppure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-eeval $ llap ((liftM reset) $ ppure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
--- the other recursive rresets still collectivize
-eeval $ llap ((liftM reset) $ pure $ llower $ ppure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-eeval $ llap (rreset $ pure $ llower $ ppure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-eeval $ llap (altrreset $ pure $ llower $ ppure $ everyD (rap short poem)) (rrap (pure overwhelm) (pure girl6))
-
-
-
--- -------------------------------------------------
-
--- Whole sentences with reset [universal > indefinite] DPs
--- -------------------------------------------------
--- w/o reset, "Someone liking every short boy listens to Girl6" (inversely
--- linked) returns True when the boys are assigned to themselves
-eeval $ llap (uup $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
--- but when the subject is reset, it returns False for the same assignment,
--- because the likers have been summed!
-eeval $ llap (uup $ rreset $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
-
--- other ways of resetting produce the same contrast as above.
--- regular "reset" and immediate "liftM reset" leave things distributive:
--- returns True for the identity assignment
-eeval $ llap (uup $ reset $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
-eeval $ llap (uup $ (liftM reset) $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
--- recursive resets collectivize:
--- returns False for the identity assignment
-eeval $ llap (uup $ rreset $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
-eeval $ llap (uup $ altrreset $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
-eeval $ llap (uup $ (liftM reset) $ pure $ llower $ rap (pure someD) (rrap (pure likes) (uup (ppure $ everyD sb)))) (rrap (pure listensTo) (pure girl6))
-
--- obversely, "Someone liking every short boy overwhelm Girl6" (inversely
--- linked) returns False for all assignments, because overwhelm here is
--- collective in its subject
-eeval $ llap (pure $ llower $ uup $ rap (pure someD) (rrap (pure likes) (ppure (up $ everyD sb)))) (rrap (pure overwhelm) (pure girl6))
--- returns True when the boys are assigned to poems, because together +p1+p2+p3
--- overwhelm Girl6
-eeval $ llap (rreset $ pure $ llower $ uup $ rap (pure someD) (rrap (pure likes) (ppure (up $ everyD sb)))) (rrap (pure overwhelm) (pure girl6))
--- ------------------------------------------------
-
--- Resets and binding
--- ------------------------------------------------
--- whether the atoms or the sum ends up on the stack depends on whether the
--- reset outscopes the push. the first DP here yeilds atom-stacks (which is
--- bad news, since "every" can't bind atoms out from under an aggregation).
--- the second DP yeilds sum-stacks, as it should
-eval $ reset $ up $ everyD sb
-eval $ up $ reset $ everyD sb
--- again, it looks like binding should follow all other operations on DPs
--- ------------------------------------------------
 
 -}
