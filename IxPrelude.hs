@@ -55,4 +55,4 @@ mzero :: IxMonadZero m => m i j a
 mzero = imzero
 
 guard :: IxMonadZero m => Bool -> m i i ()
-guard b = if b then return () else imzero
+guard b = case b of True -> return (); _ -> imzero
