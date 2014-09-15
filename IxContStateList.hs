@@ -1,11 +1,11 @@
 {-# LANGUAGE RebindableSyntax #-}
 
 import IxPrelude
+import Model
 import Control.Monad.Indexed
 import Control.Monad.Indexed.State
 import Control.Monad.Indexed.Cont
 import Control.Monad.Indexed.Trans
-import Data.List (permutations, transpose)
 import Control.Exception (assert)
 import Prelude hiding (Monad(..))
 
@@ -13,41 +13,27 @@ import Prelude hiding (Monad(..))
 -- ** TYPE SYSTEM ** 
 -- =================
 
-data Ent = Atom (String,Int)
-         | Plur {atoms :: [Ent]}
-
 type Stack   = [Ent]
 type D       = IxStateT [] Stack Stack -- D a := s -> [(a,s)]
-type K       = IxCont
+type K       = IxCont -- K r o a := (a -> o) -> r
 
 type E r     = K r r Ent
 type T r     = K r r Bool
 type ET r    = K r r (Ent -> Bool)
 type EET r   = K r r (Ent -> Ent -> Bool)
 type EEET r  = K r r (Ent -> Ent -> Ent -> Bool)
-type ETET r  = K r r ((Ent -> Bool) -> Ent -> Bool)
 type TTT r   = K r r (Bool -> Bool -> Bool)
 
-instance Show Ent where
-  show (Atom (x,y)) = x ++ show y
-  show (Plur xs)    = foldl (\a b -> a ++ "+" ++ show b) "" xs
 
-instance Eq Ent where
-  (Atom x) == (Atom y)   = x == y
-  (Plur xs) == (Plur ys) = xs == ys
-  _ == _                 = False
+-- =======================
+-- ** MONAD COMBINATORS **
+-- =======================
 
-instance Ord Ent where
-  compare (Atom (_,tag)) (Atom (_,tag')) = compare tag tag'
-  compare _ _                            = EQ
+-- Units and Binds
+-- ------------------------------------------------
+-- synonyms for the monad operators of IxStateT and Cont, to distinguish them
+-- for clarity and ape the notation in Charlow 2014
 
-
--- ========================
--- ** MONADIC OPERATIONS **
--- ========================
-
--- Synonyms for the monad operators of StateT, to distinguish them for clarity
--- from those of IxContT
 unit :: a -> D a
 unit = return
 -- ignoring type constructors:
@@ -59,15 +45,23 @@ unit = return
 -- m --@ f = \s -> concat [f x s' | (x,s') <- m s]
 infixl 1 --@
 
--- 'lift' is semantically equivalent to (--@),
--- but with type constructors that will support various monad class functions
--- including do-notation
+-- 'lift' is semantically equivalent to (--@), but with type constructors that
+-- enable lots of monadic sugar, including do-notation
 lift :: D a -> K (D b) (D b) a
 lift m = ixcont $ \k -> m --@ k
 
+-- Scope Sequencing Combinator
+(--*) :: K r o a -> (a -> K o r' b) -> K r r' b
+(--*) = (>>=)
+-- ignoring type constructors:
+-- m --* f = \k -> m (\x -> f x k)
+infixl 1 --*
+-- ------------------------------------------------
 
--- SCOPE SHIFTERS
--- ==============
+
+-- Scope Shift
+-- ------------------------------------------------
+-- inject values into trivial (pure) computations
 
 -- First-Order Scope ("Montague lift")
 pure :: a -> K r r a 
@@ -87,18 +81,15 @@ ppure = liftM pure
 --              pure $ pure x
 -- ignoring type constructors:
 --         = \c -> m (\x -> c (pure x))
+-- ------------------------------------------------
 
--- Scope Sequencing Combinator
-(--*) :: K r o a -> (a -> K o r' b) -> K r r' b
-(--*) = (>>=)
--- ignoring type constructors:
--- m --* f = \k -> m (\x -> f x k)
-infixl 1 --*
 
--- LEFT AND RIGHT APPLICATION
--- ==========================
+-- Left and Right Continuized Application
+-- ------------------------------------------------
+-- lift forward and backward function application through the monad(s)
 
 -- First-Order Continuized Application
+
 lap :: K r o a -> K o r' (a -> b) -> K r r' b
 lap = liftM2 (flip ($))
 -- equivalent to:
@@ -117,7 +108,9 @@ rap = liftM2 ($)
 -- ignoring type constructors:
 --     = \h m k -> h (\f -> m (\x -> k (f x)))
 
+
 -- Second-Order Continuized Application
+
 llap :: K s t (K r o a) -> K t s' (K o r' (a -> b)) -> K s s' (K r r' b)
 llap = liftM2 lap
 -- equivalent to:
@@ -136,7 +129,9 @@ rrap = liftM2 rap
 -- ignoring type constructors:
 --      = \H M k -> H (\h -> M (\m -> k (h `rap` m)))
 
--- Infix operators for the application combinators
+
+-- Infix combinators for left and right application
+
 (~/~) :: K r o (a -> b) -> K o r' a -> K r r' b
 (~/~) = rap
 infixr 9 ~/~
@@ -152,9 +147,11 @@ infixr 9 ~\~
 (~\\~) :: K s t (K r o a) -> K t s' (K o r' (a -> b)) -> K s s' (K r r' b)
 (~\\~) = llap
 infixr 9 ~\\~
+-- ------------------------------------------------
 
--- EVALUATION
--- ==========
+
+-- Program Evaluation
+-- ------------------------------------------------
 -- execute programmatic meanings with trivial continuations/states
 
 -- First-Order Lower
@@ -175,37 +172,23 @@ llower mm = runIxCont mm lower
 -- llower = pure lower
 --        = \M -> M (\m -> m unit)
 
-{- do we need this?
--- Second-Order Internal Lower
-llowerBelow :: K t s (K r (D a) a) -> K t s r
-llowerBelow = liftM lower
--- equivalent to:
--- llowerBelow = \mm -> do m <- mm
---                         pure (lower m)
--- ignoring type constructors:
---             = (~/~ lower)
---             = \M k -> M (\m -> lower (\l -> k (m l))
---             = \M k -> M (\m -> k (m unit))
--}
-
 -- Evaluation in Default Context
 run :: Stack -> D a -> [(a, Stack)]
 run = flip runIxStateT
 
 -- First-Order Default Evaluation
--- eval :: K r a a -> [(r, Stack)] 
 eval :: K (D b) (D a) a -> [(b, Stack)]
 eval = run [] . lower
 
 -- Second-Order Default Evaluation
--- eeval :: K s r (K r a a) -> [(s, Stack)]
 eeval :: K (D b) r (K r (D a) a) -> [(b, Stack)]
 eeval = run [] . llower
+-- ------------------------------------------------
 
 
--- RESET
--- =====
--- forces evaluation of quantificational constituents, delimiting their scope
+-- Scope Capture
+-- ------------------------------------------------
+-- force evaluation of quantificational constituents, delimiting their scope
 
 -- First-Order Reset
 res :: K (D r) (D a) a -> K (D r') (D r') r
@@ -244,14 +227,16 @@ rres2 = res . rres1
 -- ignoring type constructors:
 --       = \M -> lift $ M (\m -> unit (res m))
 --       = \M c s -> concat [c m s' | (m,s') <- M (unit . res) s]
+-- ------------------------------------------------
 
--- STACK UPDATE
--- ============
--- extracts a dref from a continuized individual; appends it to the state
+
+-- Stack Update
+-- ------------------------------------------------
+-- extract drefs from continuized individuals and append them to the stack
 
 _up :: D Ent -> D Ent
 _up m = do x <- m
-           modify (++[x])
+           imodify (++[x])
            unit x
 -- ignoring type constructors:
 --    = \s -> [(x, s'++[x]) | (x,s') <- m s]
@@ -259,7 +244,7 @@ _up m = do x <- m
 -- First-Order Push
 up :: K r (D o) Ent -> K r (D o) Ent
 up m = do x <- m
-          lift (modify (++[x]))
+          lift (imodify (++[x]))
           pure x
 -- ignoring type constructors:
 --   = \k -> m (\x s -> k x (s++[x]))
@@ -273,110 +258,6 @@ uup = liftM up
 --                 pure (up m)
 -- ignoring type constructors:
 --     = \M k -> M (\m -> k (up m))
-
-
-
--- ===============
--- ** THE MODEL **
--- ===============
-
--- Individuals
--- ------------------------------------------------
--- Atomic Individuals
-boys, girls, poems :: [Ent]
-boys     = map (\x -> Atom ("b",x)) [1..6]
-girls    = map (\x -> Atom ("g",x)) [1..6]
-poems    = map (\x -> Atom ("p",x)) [1..6]
-
--- Plural Individuals
-shortboys, shortgirls, shortpoems :: Ent
-shortboys  = Plur $ take 3 boys
-shortgirls = Plur $ take 3 girls
-shortpoems = Plur $ take 3 poems
-
--- The Domain
-domAtoms, domPlurs, univ :: [Ent]
-domAtoms = concat [boys, girls, poems]
-domPlurs = [shortboys, shortgirls, shortpoems]
-univ     = domAtoms ++ domPlurs
-
--- Some pre-fab D Bools with histories, for testing
-dbooltest1 :: D Bool
-dbooltest1 = IxStateT $ \s -> [(True, s++xs) | xs <- [head perms, perms!!3, perms!!4]]
-  where perms = permutations $ take 3 girls
--- run [] dbooltest1 = [(True,[g1,g2,g3]), (True,[g2,g3,g1]), (True,[g3,g1,g2])]
-
-dbooltest2 :: D Bool
-dbooltest2 = do _ <- dbooltest1
-                modify (\gs -> concat $ take (length gs) $ transpose [boys, gs])
-                unit True
--- run [] dbooltest2 = [(True,[b1,g1,b2,g2,b3,g3]),
---                      (True,[b1,g2,b2,g3,b3,g1]),
---                      (True,[b1,g3,b2,g1,b3,g2])]
--- ------------------------------------------------
-
--- Two-Place Relations
--- ------------------------------------------------
-_likes, _envies, _pities, _listensTo, _overwhelm :: Ent -> Ent -> Bool
-
--- people like other people when their indices match:
--- b1 likes g1, g3 likes b3, but g5 doesn't like b4 or g4
-_likes (Atom (x,n)) (Atom (y,m)) = n == m && y /= "p" && x /= "p"
-_likes _ _                       = False
-
--- people envy people of the same gender that they are less than:
--- b1 envies b3, but b3 does not envy b1 nor does he envy g6
-_envies (Atom (x,n)) (Atom (y,m)) = x == y && n > m
-_envies _ _                       = False
-
--- people pity people that envy them:
--- b3 pities b1, but not g1, nor does b1 pity him
-_pities (Atom (x,n)) (Atom (y,m)) = x == y && n < m
-_pities _ _                       = False
-
--- people listen to people of the opposite gender that they divide evenly:
--- b2 listens to g6, as does b3, but b4 doesn't, and neither does g2
-_listensTo (Atom (x,n)) (Atom (y,m)) = n `mod` m == 0 &&
-                                       (x == "g" && y == "b"  ||
-                                        x == "b" && y == "g")
-_listensTo _ _                       = False
-
--- +p1+p2+p3 overwhelm g6, and +b1+b2+b3 overwhelm each of b1,b2, and b3;
--- nothing else overwhelms anyone else
-_overwhelm y xs = xs == shortpoems && y == girls!!5 ||
-                  xs == shortboys  && y `elem` take 3 boys
--- ------------------------------------------------
-
--- Three-Place Relations
--- ------------------------------------------------
-_gave :: Ent -> Ent -> Ent -> Bool
--- boys give girls poems in runs:
--- b1 gave g2 p3, and b4 gave g5 p6, but b1 didn't give g3 anything, and he
--- didn't give p4 to anybody
-_gave (Atom (x,n)) (Atom (y,m)) (Atom (z,o)) = x == "g" && y == "p" &&
-                                               z == "b" && n == o+1 && m == n+1
-_gave _ _ _                                  = False
--- ------------------------------------------------
-
--- More Domain Functions
--- ------------------------------------------------
-_of :: (Ent -> Bool) -> Ent -> Ent -> Bool
--- approximates English 'of'. It takes two arguments, a noun and an individual
--- (the owner). So "poem `of_` b3" is the set of poems belonging to b3.
---
--- note that b1 doesn't have any poems.
-_of p (Atom (_,n)) e@(Atom (y,m)) = p e && y == "p" && n == m && n /= 1
-_of _ _ _                         = False
-
-_short, _tall :: (Ent -> Bool) -> Ent -> Bool
--- anything less than or equal to 3 is short
-_short p e@(Atom (_,n)) = p e && n <= 3
-_short _ _              = False
-
--- everything else is tall
-_tall p e@(Atom (_,n)) = p e && n > 3
-_tall _ _              = False
--- ------------------------------------------------
 
 
 
@@ -425,8 +306,14 @@ neg = pure _neg
 
 -- Intersective Adjectives
 -- ------------------------------------------------
-short, tall :: ETET r
+short, tall :: K r r ((Ent -> Bool) -> Ent -> Bool)
 [short, tall] = map pure [_short, _tall]
+-- ------------------------------------------------
+
+-- Relational Adjectives
+-- ------------------------------------------------
+fav :: K r r ((Ent -> Bool) -> Ent -> Ent)
+fav = pure _fav
 -- ------------------------------------------------
 
 -- Abbreviations
@@ -452,22 +339,11 @@ of_ = pure _of
 
 -- Proper Names
 -- ------------------------------------------------
-_b1, _b2, _b3, _b4, _b5, _b6 :: Ent
-[_b1, _b2, _b3, _b4, _b5, _b6] = boys
-
 b1, b2, b3, b4, b5, b6 :: E r
 [b1, b2, b3, b4, b5, b6] = map pure boys
 
-
-_g1, _g2, _g3, _g4, _g5, _g6 :: Ent
-[_g1, _g2, _g3, _g4, _g5, _g6] = girls
-
 g1, g2, g3, g4, g5, g6 :: E r
 [g1, g2, g3, g4, g5, g6] = map pure girls
-
-
-_p1, _p2, _p3, _p4, _p5, _p6 :: Ent
-[_p1, _p2, _p3, _p4, _p5, _p6] = poems
 
 p1, p2, p3, p4, p5, p6 :: E r
 [p1, p2, p3, p4, p5, p6] = map pure poems
@@ -478,12 +354,12 @@ p1, p2, p3, p4, p5, p6 :: E r
 -- pronouns are indexed from the back of the stack;
 -- out-of-bounds indices throw "Assertion failed" errors :)
 _pro :: Int -> D Ent
-_pro n = gets $ \s -> assert (length s >= n + 1) $ reverse s !! n
+_pro n = igets $ \s -> assert (length s >= n + 1) $ reverse s !! n
 
 pro :: Int -> E (D r)
 pro n = lift (_pro n)
 -- equivalent to:
--- pro n = lift $ do s <- get
+-- pro n = lift $ do s <- iget
 --                   unit (reverse s !! n)
 -- ignoring type constructors:
 --       = \k -> \s -> k (reverse s !! n) s
@@ -495,19 +371,6 @@ pro0 = pro 0
 
 -- Common Nouns
 -- ------------------------------------------------
-_boy, _girl, _poem, _thing :: Ent -> Bool
-
-_boy (Atom ("b",_)) = True
-_boy _              = False
-
-_girl (Atom ("g",_)) = True
-_girl _              = False
-
-_poem (Atom ("p",_)) = True
-_poem _              = False 
-
-_thing = const True
-
 boy, girl, poem, thing :: ET r
 [boy, girl, poem, thing] = map pure [_boy, _girl, _poem, _thing]
 -- ------------------------------------------------
