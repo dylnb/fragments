@@ -1,5 +1,10 @@
 {-# LANGUAGE RebindableSyntax #-}
 
+module IxContGrammar where
+
+-- A port of the monadic denotational semantics for a fragment of English, as
+-- presented in Charlow 2014: "On the semantics of exceptional scope".
+
 import IxPrelude
 import Model
 import Control.Monad.Indexed
@@ -468,16 +473,16 @@ eval $ (res $ up some ~\~ tb) ~\~ likes ~/~ (res $ up some ~\~ tg)
 Basic Anaphora
 --------------
 "Boy 4 likes his poem"
-eeval $ (ppure $ up b4) ~\\~ pure likes ~//~ (uup $ liftM res $ poss (pro 0) poem)
+eeval $ (ppure $ up b4) ~\\~ pure likes ~//~ (uup $ rres1 $ poss pro0 poem)
 
 "Boy 1 is short and he is tall"
-eval $ (res $ up b1 ~\~ sb) ~\~ conj ~/~ (res $ pro 0 ~\~ tb)
+eval $ (res $ up b1 ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
 
 "Some boy is short and he is tall"
-eval $ (res $ (res $ up some ~\~ boy) ~\~ sb) ~\~ conj ~/~ (res $ pro 0 ~\~ tb)
+eval $ (res $ (res $ up some ~\~ boy) ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
 
 "Every boy is short and he is tall" [Binding failure]
-eval $ (res $ (lower $ up every ~\~ boy) ~\~ sb) ~\~ conj ~/~ (res $ pro 0 ~\~ tb)
+eval $ (res $ (lower $ up every ~\~ boy) ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
 
 
 Inverse Scope
