@@ -2,7 +2,7 @@ module Model where
 
 data Ent = Atom (String,Int)
          | Plur {atoms :: [Ent]}
-
+         -- | Func {unfunc :: M.Map Ent Stack}
 
 instance Show Ent where
   show (Atom (x,y)) = x ++ show y
