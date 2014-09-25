@@ -1,26 +1,24 @@
-{-# LANGUAGE RebindableSyntax #-}
-
-module IxContGrammar where
+module IxContStateList where
 
 -- A port of the monadic denotational semantics for a fragment of English, as
 -- presented in Charlow 2014: "On the semantics of exceptional scope".
 
 import IxPrelude
 import Model
+import Control.Monad.State
 import Control.Monad.Indexed
-import Control.Monad.Indexed.State
 import Control.Monad.Indexed.Cont
-import Control.Monad.Indexed.Trans
 import Control.Exception (assert)
-import Prelude hiding (Monad(..))
 
 -- =================
 -- ** TYPE SYSTEM ** 
 -- =================
 
-type Stack   = [Ent]
-type D       = IxStateT [] Stack Stack -- D a := s -> [(a,s)]
-type K       = IxCont -- K r o a := (a -> o) -> r
+type Stack = [Ent]
+type M     = StateT Stack []
+             -- M a := s -> [(a,s)]
+type K     = IxCont
+             -- K r o a := (a -> o) -> r
 
 type E r     = K r r Ent
 type T r     = K r r Bool
@@ -36,28 +34,31 @@ type TTT r   = K r r (Bool -> Bool -> Bool)
 
 -- Units and Binds
 -- ------------------------------------------------
--- synonyms for the monad operators of IxStateT and Cont, to distinguish them
+-- synonyms for the monad operators of StateT and IxCont, to distinguish them
 -- for clarity and ape the notation in Charlow 2014
 
-unit :: a -> D a
+unit :: a -> M a
 unit = return
 -- ignoring type constructors:
 -- unit x = \s -> [(x,s)]
 
-(--@) :: D a -> (a -> D b) -> D b
+(--@) :: M a -> (a -> M b) -> M b
 (--@) = (>>=)
 -- ignoring type constructors:
 -- m --@ f = \s -> concat [f x s' | (x,s') <- m s]
 infixl 1 --@
 
--- 'lift' is semantically equivalent to (--@), but with type constructors that
--- enable lots of monadic sugar, including do-notation
-lift :: D a -> K (D b) (D b) a
-lift m = ixcont $ \k -> m --@ k
+-- 'ixlift' is semantically equivalent to (--@), but adds a type constructor
+-- around the continuation 
+ixlift :: M a -> K (M b) (M b) a
+ixlift m = ixcont $ \k -> m --@ k
+
+iixlift :: K r r (M a) -> K r r (K (M b) (M b) a)
+iixlift = liftM ixlift
 
 -- Scope Sequencing Combinator
 (--*) :: K r o a -> (a -> K o r' b) -> K r r' b
-(--*) = (>>=)
+(--*) = (>>>=)
 -- ignoring type constructors:
 -- m --* f = \k -> m (\x -> f x k)
 infixl 1 --*
@@ -69,7 +70,7 @@ infixl 1 --*
 -- inject values into trivial (pure) computations
 
 -- First-Order Scope ("Montague lift")
-pure :: a -> K r r a 
+pure :: a -> K (M r) (M r) a 
 pure = return
 -- equivalent to:
 -- pure = lift . unit
@@ -78,7 +79,7 @@ pure = return
 --      = \x k -> k x
   
 -- Second-Order Scope ("Internal lift")
-ppure :: K r r a -> K r r (K r' r' a)
+ppure :: K r r a -> K r r (K (M r') (M r') a)
 ppure = liftM pure
 -- equivalent to:
 -- ppure m = pure pure ~/~ m
@@ -96,7 +97,7 @@ ppure = liftM pure
 -- First-Order Continuized Application
 
 lap :: K r o a -> K o r' (a -> b) -> K r r' b
-lap = liftM2 (flip ($))
+lap = ixliftM2 (flip ($))
 -- equivalent to:
 -- lap = \m h -> do x <- m
 --                  f <- h
@@ -105,7 +106,7 @@ lap = liftM2 (flip ($))
 --     = \m h k -> m (\x -> h (\f -> k (f x)))
 
 rap :: K r o (a -> b) -> K o r' a -> K r r' b
-rap = liftM2 ($)
+rap = ixliftM2 ($)
 -- equivalent to:
 -- rap = \h m -> do f <- h
 --                  x <- m
@@ -117,7 +118,7 @@ rap = liftM2 ($)
 -- Second-Order Continuized Application
 
 llap :: K s t (K r o a) -> K t s' (K o r' (a -> b)) -> K s s' (K r r' b)
-llap = liftM2 lap
+llap = ixliftM2 lap
 -- equivalent to:
 -- llap = \M H -> do m <- M
 --                   h <- H
@@ -126,7 +127,7 @@ llap = liftM2 lap
 --      = \M H k -> M (\m -> H (\h -> k (m `lap` h)))
 
 rrap :: K s t (K r o (a -> b)) -> K t s' (K o r' a) -> K s s' (K r r' b)
-rrap = liftM2 rap
+rrap = ixliftM2 rap
 -- equivalent to:
 -- rrap = \H M -> do h <- H
 --                   m <- M
@@ -160,33 +161,36 @@ infixr 9 ~\\~
 -- execute programmatic meanings with trivial continuations/states
 
 -- First-Order Lower
-lower :: K r (D a) a -> r
+lower :: K r (M a) a -> r
 lower m = runIxCont m unit
 -- ignoring type constructors:
 -- lower = pure unit
 --       = \m -> m unit
 
 -- Second-Order (Total) Lower
-llower :: K t r (K r (D a) a) -> t
+llower :: K t r (K r (M a) a) -> t
 llower mm = runIxCont mm lower
 -- equivalent to:
 -- llower = lower . join
---   (where 'join' is the join of the ContT monad: \M -> M --* id)
---        = \mm -> flip runIxContT unit $ do m <- mm; m
+--   (where 'join' is the join of the Cont monad: \M -> M --* id)
+--        = \mm -> runIxCont (mm --* id) unit
 -- ignoring type constructors:
 -- llower = pure lower
 --        = \M -> M (\m -> m unit)
 
+llower1 :: K t r' (K r (M a) a) -> K t r' r
+llower1 = ixliftM lower
+
 -- Evaluation in Default Context
-run :: Stack -> D a -> [(a, Stack)]
-run = flip runIxStateT
+run :: Stack -> M a -> [(a, Stack)]
+run s m = runStateT m s
 
 -- First-Order Default Evaluation
-eval :: K (D b) (D a) a -> [(b, Stack)]
+eval :: K (M b) (M a) a -> [(b, Stack)]
 eval = run [] . lower
 
 -- Second-Order Default Evaluation
-eeval :: K (D b) r (K r (D a) a) -> [(b, Stack)]
+eeval :: K (M b) r (K r (M a) a) -> [(b, Stack)]
 eeval = run [] . llower
 -- ------------------------------------------------
 
@@ -196,8 +200,8 @@ eeval = run [] . llower
 -- force evaluation of quantificational constituents, delimiting their scope
 
 -- First-Order Reset
-res :: K (D r) (D a) a -> K (D r') (D r') r
-res = lift . lower
+res :: K (M r) (M a) a -> K (M r') (M r') r
+res = ixlift . lower
 -- equivalent to:
 -- res m = ixcont $ \k -> do x <- lower m
 --                           k x
@@ -206,15 +210,15 @@ res = lift . lower
 --       = \k s -> concat [k x s' | (x,s') <- m unit s]
 
 -- Second-Order Total Reset
-rres :: K (D b) r (K r (D a) a) -> K (D u) (D u) (K r' r' b)
-rres = ppure . lift . llower
+rres :: K (M b) r (K r (M a) a) -> K (M u) (M u) (K (M r') (M r') b)
+rres = ppure . ixlift . llower
 -- ignoring type constructors:
 -- rres = \M c -> llower M --@ \a -> c (pure a)
 --      = \M c s -> concat [c (pure m) s' | (m,s') <- llower M s]
 
 -- Second-Order Inner Reset
-rres1 :: K t s (K (D r) (D a) a) -> K t s (K (D r') (D r') r)
-rres1 = liftM res
+rres1 :: K t s (K (M r) (M a) a) -> K t s (K (M r') (M r') r)
+rres1 = ixliftM res
 -- equivalent to:
 -- rres1 = \mm -> $ do m <- mm
 --                     pure (res m)
@@ -224,7 +228,7 @@ rres1 = liftM res
 -- Second-Order Staged Reset (preserves scopal structure)
 -- note that this won't type out for 3-level towers topped by universals;
 -- they'll be forced to use the total reset
-rres2 :: K (D u) (D (K (D r) (D r) r)) (K (D r) (D a) a) -> K (D r') (D r') u
+rres2 :: K (M u) (M (K (M r) (M r) r)) (K (M r) (M a) a) -> K (M r') (M r') u
 rres2 = res . rres1
 -- equivalent to:
 -- rres2 = \mm -> res $ do m <- mm
@@ -239,24 +243,26 @@ rres2 = res . rres1
 -- ------------------------------------------------
 -- extract drefs from continuized individuals and append them to the stack
 
-_up :: D Ent -> D Ent
+_up :: M Ent -> M Ent
 _up m = do x <- m
-           imodify (++[x])
+           modify (++[x])
            unit x
 -- ignoring type constructors:
 --    = \s -> [(x, s'++[x]) | (x,s') <- m s]
 
 -- First-Order Push
-up :: K r (D o) Ent -> K r (D o) Ent
-up m = do x <- m
-          lift (imodify (++[x]))
-          pure x
+up :: K r (M o) Ent -> K r (M o) Ent
+up m = m --* \x -> ixlift (modify (++[x])) --* \_ -> pure x
+-- equivalent to:
+-- up m = do x <- m
+--           ixlift (modify (++[x]))
+--           pure x
 -- ignoring type constructors:
 --   = \k -> m (\x s -> k x (s++[x]))
 
 -- Second-Order Push
-uup :: K t s (K r (D o) Ent) -> K t s (K r (D o) Ent)
-uup = liftM up
+uup :: K t s (K r (M o) Ent) -> K t s (K r (M o) Ent)
+uup = ixliftM up
 -- equivalent to:
 -- uup = ((unit up) ~/~)
 --     = \mm -> do m <- mm
@@ -275,14 +281,14 @@ uup = liftM up
 
 -- Transitive Verbs
 -- ------------------------------------------------
-likes, envies, pities, listensTo, overwhelm :: EET r
+likes, envies, pities, listensTo, overwhelm :: EET (M r)
 [likes, envies, pities, listensTo, overwhelm] =
   map pure [_likes, _envies, _pities, _listensTo, _overwhelm]
 -- ------------------------------------------------
 
 -- Ditransitive Verbs
 -- ------------------------------------------------
-gave :: EEET r
+gave :: EEET (M r)
 gave = pure _gave
 -- ------------------------------------------------
 
@@ -292,16 +298,16 @@ gave = pure _gave
 
 -- Boolean Operators
 -- ------------------------------------------------
-conj :: TTT r
+conj :: TTT (M r)
 conj = pure (&&)
 
 disj :: IxMonadPlus m => m i j a -> m i j a -> m i j a
 disj = implus
 
-_neg :: D Bool -> D Bool
-_neg m = IxStateT $ \s -> [(not $ any fst $ run s m, s)]
+_neg :: M Bool -> M Bool
+_neg m = StateT $ \s -> [(not $ any fst $ run s m, s)]
 
-neg :: K r r (D Bool -> D Bool)
+neg :: K (M r) (M r) (M Bool -> M Bool)
 neg = pure _neg
 -- ------------------------------------------------
 
@@ -311,22 +317,14 @@ neg = pure _neg
 
 -- Intersective Adjectives
 -- ------------------------------------------------
-short, tall :: K r r ((Ent -> Bool) -> Ent -> Bool)
+short, tall :: K (M r) (M r) ((Ent -> Bool) -> Ent -> Bool)
 [short, tall] = map pure [_short, _tall]
 -- ------------------------------------------------
 
 -- Relational Adjectives
 -- ------------------------------------------------
-fav :: K r r ((Ent -> Bool) -> Ent -> Ent)
+fav :: K (M r) (M r)  ((Ent -> Bool) -> Ent -> Ent)
 fav = pure _fav
--- ------------------------------------------------
-
--- Abbreviations
-tb,tg,sb,sg :: ET r
-tb = tall ~/~ boy
-tg = tall ~/~ girl
-sb = short ~/~ boy
-sg = short ~/~ girl
 -- ------------------------------------------------
 
 
@@ -334,7 +332,7 @@ sg = short ~/~ girl
 -- ============
 
 -- ------------------------------------------------
-of_ :: K r r ((Ent -> Bool) -> Ent -> Ent -> Bool)
+of_ :: K (M r) (M r) ((Ent -> Bool) -> Ent -> Ent -> Bool)
 of_ = pure _of
 -- ------------------------------------------------
 
@@ -344,13 +342,13 @@ of_ = pure _of
 
 -- Proper Names
 -- ------------------------------------------------
-b1, b2, b3, b4, b5, b6 :: E r
+b1, b2, b3, b4, b5, b6 :: E (M r)
 [b1, b2, b3, b4, b5, b6] = map pure boys
 
-g1, g2, g3, g4, g5, g6 :: E r
+g1, g2, g3, g4, g5, g6 :: E (M r)
 [g1, g2, g3, g4, g5, g6] = map pure girls
 
-p1, p2, p3, p4, p5, p6 :: E r
+p1, p2, p3, p4, p5, p6 :: E (M r)
 [p1, p2, p3, p4, p5, p6] = map pure poems
 -- ------------------------------------------------
 
@@ -358,11 +356,11 @@ p1, p2, p3, p4, p5, p6 :: E r
 -- ------------------------------------------------
 -- pronouns are indexed from the back of the stack;
 -- out-of-bounds indices throw "Assertion failed" errors :)
-_pro :: Int -> D Ent
-_pro n = igets $ \s -> assert (length s >= n + 1) $ reverse s !! n
+_pro :: Int -> M Ent
+_pro n = gets $ \s -> assert (length s >= n + 1) $ reverse s !! n
 
-pro :: Int -> E (D r)
-pro n = lift (_pro n)
+pro :: Int -> E (M r)
+pro n = ixlift (_pro n)
 -- equivalent to:
 -- pro n = lift $ do s <- iget
 --                   unit (reverse s !! n)
@@ -370,14 +368,21 @@ pro n = lift (_pro n)
 --       = \k -> \s -> k (reverse s !! n) s
 
 -- convenience pronoun for grabbing the most recent dref
-pro0 :: E (D r)
+pro0 :: E (M r)
 pro0 = pro 0
 -- ------------------------------------------------
 
 -- Common Nouns
 -- ------------------------------------------------
-boy, girl, poem, thing :: ET r
+boy, girl, poem, thing :: ET (M r)
 [boy, girl, poem, thing] = map pure [_boy, _girl, _poem, _thing]
+
+-- Abbreviations
+tb,tg,sb,sg :: ET (M r)
+tb = tall ~/~ boy
+tg = tall ~/~ girl
+sb = short ~/~ boy
+sg = short ~/~ girl
 -- ------------------------------------------------
  
 -- Plurals
@@ -390,11 +395,14 @@ oplus (Plur xs) y@(Atom _)  = Plur (xs++[y])
 oplus (Plur xs) (Plur ys)   = Plur (xs++ys)
 
 -- Abbreviations
-p123, b123 :: Ent
+_p123, _b123 :: Ent
 -- p123 abbreviates the collective of poems +p1+p2+p3, b123 the collective of
 -- boys +b1+b2+b3
-p123 = foldr1 oplus [_p1,_p2,_p3]
-b123 = foldr1 oplus [_b1,_b2,_b3]
+_p123 = foldr1 oplus [_p1,_p2,_p3]
+_b123 = foldr1 oplus [_b1,_b2,_b3]
+
+p123, b123 :: E (M r)
+[p123, b123] = map pure [_p123, _b123]
 -- ------------------------------------------------
 
 
@@ -403,12 +411,12 @@ b123 = foldr1 oplus [_b1,_b2,_b3]
 
 -- Indefinites
 -- ------------------------------------------------
-_some :: (Ent -> D Bool) -> D Ent
-_some p = do x <- ilift domAtoms
+_some :: (Ent -> M Bool) -> M Ent
+_some p = do x <- lift domAtoms
              p x --@ guard
              unit x
 
-some :: K (D Ent) (D Bool) Ent
+some :: K (M Ent) (M Bool) Ent
 some = ixcont _some
 -- ignoring type constructors:
 --   = \k s -> concat [k x s' | x <- domAtoms, (b,s') <- p x s, b]
@@ -416,18 +424,18 @@ some = ixcont _some
 
 -- Universals
 -- ------------------------------------------------
-_every :: (Ent -> D Bool) -> E (D Bool)
+_every :: (Ent -> M Bool) -> E (M Bool)
 _every p = ixcont $ \k -> _neg $ _some p --@ _neg . k
 
-every :: K (E (D Bool)) (D Bool) Ent
+every :: K (E (M Bool)) (M Bool) Ent
 every = ixcont _every
 -- ------------------------------------------------
 
 -- Possessives
 -- ------------------------------------------------
 -- poss :: E r -> ET r -> K r (E r)
--- poss :: E r -> K (D Bool) o (Ent -> Bool) -> K r r (K (D Ent) o Bool)
-poss :: E r -> ET (D Bool) -> K r r (K (D Ent) (D Bool) Bool)
+-- poss :: E r -> K (M Bool) o (Ent -> Bool) -> K r r (K (M Ent) o Bool)
+poss :: E (M r) -> ET (M Bool) -> K (M r) (M r) (K (M Ent) (M Bool) Bool)
 poss g p = pure some ~\\~ ((pure p ~\\~ pure of_) ~//~ ppure g)
 -- ------------------------------------------------
 
@@ -435,16 +443,16 @@ poss g p = pure some ~\\~ ((pure p ~\\~ pure of_) ~//~ ppure g)
 -- RELATIVE CLAUSES
 -- ================
 
-_gap :: Int -> D Ent
+_gap :: Int -> M Ent
 _gap = _pro
 
-gap :: Int -> E (D r)
+gap :: Int -> E (M r)
 gap = pro
 
 _that :: Bool -> Bool -> Bool
 _that = (&&)
 
-that :: TTT r
+that :: TTT (M r)
 that = conj
 
 

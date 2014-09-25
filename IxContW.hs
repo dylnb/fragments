@@ -1,20 +1,16 @@
-{-# LANGUAGE RebindableSyntax #-}
-
 module IxContW where
 
 -- A port of the monadic denotational semantics for a fragment of English, as
 -- presented in Charlow 2014: "On the semantics of exceptional scope",
 -- extended with intensional meanings
 
-import IxWPrelude
+import IxPrelude
 import WModel
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.List
 import Control.Monad.Indexed
--- import Control.Monad.Indexed.State
 import Control.Monad.Indexed.Cont
--- import Control.Monad.Indexed.Trans
 import Control.Exception (assert)
 import Prelude hiding (Monad(..))
 
@@ -42,7 +38,7 @@ type TTT r   = K r r (Bool -> Bool -> Bool)
 
 -- Units and Binds
 -- ------------------------------------------------
--- synonyms for the monad operators of IxStateT and Cont, to distinguish them
+-- synonyms for the monad operators of StateT and IxCont, to distinguish them
 -- for clarity and ape the notation in Charlow 2014
 
 unit :: a -> D a
@@ -56,8 +52,8 @@ unit = return
 -- m --@ f = \s -> concat [f x s' | (x,s') <- m s]
 infixl 1 --@
 
--- 'ixlift' is semantically equivalent to (--@), but with type constructors that
--- enable monadic sugar
+-- 'ixlift' is semantically equivalent to (--@), but adds a type constructor
+-- around the continuation
 ixlift :: D a -> K (D b) (D b) a
 ixlift m = ixcont $ \k -> m --@ k
 
@@ -73,19 +69,6 @@ wlift = ixlift . lift . lift
 -- ignoring type constructors:
 -- m --* f = \k -> m (\x -> f x k)
 infixl 1 --*
-
--- -- World-Sharing Application
--- (--#) :: W a -> (a -> W b) -> W b
--- m --# f = \w -> f (m w) w
-
--- intens :: a -> W a
--- intens = const
-
--- (#\#) :: W a -> W (a -> b) -> W b
--- m #\# h = m --# (\x -> h --# (\f -> intens (f x)))
-
--- (#/#) :: W (a -> b) -> W a -> W b
--- h #/# m = h --# (\f -> m --# (\x -> intens (f x)))
 -- ------------------------------------------------
 
 
@@ -112,6 +95,7 @@ ppure = liftM pure
 -- ignoring type constructors:
 --         = \c -> m (\x -> c (pure x))
 -- ------------------------------------------------
+
 
 -- Left and Right Continuized Application
 -- ------------------------------------------------
@@ -195,8 +179,8 @@ llower :: K t r (K r (D a) a) -> t
 llower mm = runIxCont mm lower
 -- equivalent to:
 -- llower = lower . join
---   (where 'join' is the join of the ContT monad: \M -> M --* id)
---        = \mm -> flip runIxContT unit $ do m <- mm; m
+--   (where 'join' is the join of the Cont monad: \M -> M --* id)
+--        = \mm -> flip runIxCont unit $ do m <- mm; m
 -- ignoring type constructors:
 -- llower = pure lower
 --        = \M -> M (\m -> m unit)
@@ -328,6 +312,7 @@ _thinks m = do s <- get
 thinks :: K (D r) (D r) (D Bool -> D (Ent -> Bool))
 thinks = pure _thinks
 -- ------------------------------------------------
+
 
 -- CONNECTIVES
 -- ===========
