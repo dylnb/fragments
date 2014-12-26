@@ -1,9 +1,13 @@
+module ExcScope where
 
-module ContStateList where
+-- A port of the monadic denotational semantics for a fragment of English, as
+-- presented in Charlow 2014: "On the semantics of exceptional scope".
 
-import Model
-import Control.Monad.Cont
+import ExcScope.Model
+import ExcScope.IxPrelude
 import Control.Monad.State
+import Control.Monad.Indexed
+import Control.Monad.Indexed.Cont
 import Control.Exception (assert)
 
 -- =================
@@ -11,20 +15,17 @@ import Control.Exception (assert)
 -- =================
 
 type Stack = [Ent]
-type D     = StateT Stack []  -- D a := s -> [(a,s)]
-type K r a = ContT r D a -- K r a := (a -> D r) -> D r
-                         --       == (a -> s -> [(r,s)]) -> s -> [(r,s)]
+type M     = StateT Stack []
+             -- M a := s -> [(a,s)]
+type K     = IxCont
+             -- K r o a := (a -> o) -> r
 
-type E r    = K r Ent
-type T r    = K r Bool
-type ET r   = K r (Ent -> Bool)
-type EET r  = K r (Ent -> Ent -> Bool)
-type EEET r = K r (Ent -> Ent -> Ent -> Bool)
-type TTT r  = K r (Bool -> Bool -> Bool)
-
-instance (MonadPlus m) => MonadPlus (ContT r m) where
-  mzero = ContT $ const mzero
-  m `mplus` n = ContT $ \ c -> runContT m c `mplus` runContT n c
+type E r     = K r r Ent
+type T r     = K r r Bool
+type ET r    = K r r (Ent -> Bool)
+type EET r   = K r r (Ent -> Ent -> Bool)
+type EEET r  = K r r (Ent -> Ent -> Ent -> Bool)
+type TTT r   = K r r (Bool -> Bool -> Bool)
 
 
 -- =======================
@@ -33,25 +34,33 @@ instance (MonadPlus m) => MonadPlus (ContT r m) where
 
 -- Units and Binds
 -- ------------------------------------------------
--- synonyms for the monad operators of IxStateT and Cont, to distinguish them
+-- synonyms for the monad operators of StateT and IxCont, to distinguish them
 -- for clarity and ape the notation in Charlow 2014
 
-unit :: a -> D a
+unit :: a -> M a
 unit = return
 -- ignoring type constructors:
 -- unit x = \s -> [(x,s)]
 
-(--@) :: D a -> (a -> D b) -> D b
+(--@) :: M a -> (a -> M b) -> M b
 (--@) = (>>=)
 -- ignoring type constructors:
 -- m --@ f = \s -> concat [f x s' | (x,s') <- m s]
 infixl 1 --@
 
+-- 'ixlift' is semantically equivalent to (--@), but adds a type constructor
+-- around the continuation 
+ixlift :: M a -> K (M b) (M b) a
+ixlift m = ixcont $ \k -> m --@ k
+
+iixlift :: K r r (M a) -> K r r (K (M b) (M b) a)
+iixlift = liftM ixlift
+
 -- Scope Sequencing Combinator
-(--*) :: K r a -> (a -> K r b) -> K r b
-(--*) = (>>=)
+(--*) :: K r o a -> (a -> K o r' b) -> K r r' b
+(--*) = (>>>=)
 -- ignoring type constructors:
--- -- m --* f = \k -> m (\x -> f x k)
+-- m --* f = \k -> m (\x -> f x k)
 infixl 1 --*
 -- ------------------------------------------------
 
@@ -61,23 +70,23 @@ infixl 1 --*
 -- inject values into trivial (pure) computations
 
 -- First-Order Scope ("Montague lift")
-pure :: a -> K r a 
-pure = return
+kunit :: a -> K (M r) (M r) a 
+kunit = return
 -- equivalent to:
--- pure = lift . unit
+-- kunit = lift . unit
 --   (where 'lift' is the transformer of the K type: \m k -> m --@ k)
 -- ignoring type constructors:
---      = \x k -> k x
+--       = \x k -> k x
   
 -- Second-Order Scope ("Internal lift")
-ppure :: K r a -> K r (K r' a)
-ppure = liftM pure
+kkunit :: K r r a -> K r r (K (M r') (M r') a)
+kkunit = liftM kunit
 -- equivalent to:
--- ppure m = pure pure ~/~ m
---         = do x <- m
---              pure $ pure x
+-- kkunit m = kunit kunit ~/~ m
+--          = do x <- m
+--               kunit $ kunit x
 -- ignoring type constructors:
---         = \c -> m (\x -> c (pure x))
+--          = \c -> m (\x -> c (kunit x))
 -- ------------------------------------------------
 
 
@@ -87,59 +96,61 @@ ppure = liftM pure
 
 -- First-Order Continuized Application
 
-lap :: K r a -> K r (a -> b) -> K r b
-lap = liftM2 (flip ($))
+lap :: K r o a -> K o r' (a -> b) -> K r r' b
+lap = ixliftM2 (flip ($))
 -- equivalent to:
 -- lap = \m h -> do x <- m
 --                  f <- h
---                  pure (f x)
+--                  kunit (f x)
 -- ignoring type constructors:
 --     = \m h k -> m (\x -> h (\f -> k (f x)))
 
-rap :: K r (a -> b) -> K r a -> K r b
-rap = liftM2 ($)
+rap :: K r o (a -> b) -> K o r' a -> K r r' b
+rap = ixliftM2 ($)
 -- equivalent to:
 -- rap = \h m -> do f <- h
 --                  x <- m
---                  pure (f x)
+--                  kunit (f x)
 -- ignoring type constructors:
 --     = \h m k -> h (\f -> m (\x -> k (f x)))
 
+
 -- Second-Order Continuized Application
 
-llap :: K r' (K r a) -> K r' (K r (a -> b)) -> K r' (K r b)
-llap = liftM2 lap
+llap :: K s t (K r o a) -> K t s' (K o r' (a -> b)) -> K s s' (K r r' b)
+llap = ixliftM2 lap
 -- equivalent to:
 -- llap = \M H -> do m <- M
 --                   h <- H
---                   pure (m `lap` h)
+--                   kunit (m `lap` h)
 -- ignoring type constructors:
 --      = \M H k -> M (\m -> H (\h -> k (m `lap` h)))
 
-rrap :: K r' (K r (a -> b)) -> K r' (K r a) -> K r' (K r b)
-rrap = liftM2 rap
+rrap :: K s t (K r o (a -> b)) -> K t s' (K o r' a) -> K s s' (K r r' b)
+rrap = ixliftM2 rap
 -- equivalent to:
 -- rrap = \H M -> do h <- H
 --                   m <- M
---                   pure (h `rap` m)
+--                   kunit (h `rap` m)
 -- ignoring type constructors:
 --      = \H M k -> H (\h -> M (\m -> k (h `rap` m)))
 
+
 -- Infix combinators for left and right application
 
-(~/~) :: K r (a -> b) -> K r a -> K r b
+(~/~) :: K r o (a -> b) -> K o r' a -> K r r' b
 (~/~) = rap
 infixr 9 ~/~
 
-(~//~) :: K r' (K r (a -> b)) -> K r' (K r a) -> K r' (K r b)
+(~//~) :: K s t (K r o (a -> b)) -> K t s' (K o r' a) -> K s s' (K r r' b)
 (~//~) = rrap
 infixr 9 ~//~
 
-(~\~) :: K r a -> K r (a -> b) -> K r b
+(~\~) :: K r o a -> K o r' (a -> b) -> K r r' b
 (~\~) = lap
 infixr 9 ~\~
 
-(~\\~) :: K r' (K r a) -> K r' (K r (a -> b)) -> K r' (K r b)
+(~\\~) :: K s t (K r o a) -> K t s' (K o r' (a -> b)) -> K s s' (K r r' b)
 (~\\~) = llap
 infixr 9 ~\\~
 -- ------------------------------------------------
@@ -150,34 +161,38 @@ infixr 9 ~\\~
 -- execute programmatic meanings with trivial continuations/states
 
 -- First-Order Lower
-lower :: K a a -> D a
-lower m = runContT m unit
+lower :: K r (M a) a -> r
+lower m = runIxCont m unit
 -- ignoring type constructors:
--- lower = pure unit
+-- lower = kunit unit
 --       = \m -> m unit
 
 -- Second-Order (Total) Lower
-llower :: K a (K a a) -> D a
-llower mm = runContT mm lower
+llower :: K t r (K r (M a) a) -> t
+llower mm = runIxCont mm lower
 -- equivalent to:
 -- llower = lower . join
---   (where 'join' is the join of the ContT monad: \M -> M --* id)
---        = \mm -> flip runContT unit $ do m <- mm; m
+--   (where 'join' is the join of the Cont monad: \M -> M --* id)
+--        = \mm -> runIxCont (mm --* id) unit
 -- ignoring type constructors:
--- llower = pure lower
+-- llower = kunit lower
 --        = \M -> M (\m -> m unit)
 
+llower1 :: K t r' (K r (M a) a) -> K t r' r
+llower1 = ixliftM lower
+
 -- Evaluation in Default Context
-run :: Stack -> D a -> [(a,Stack)]
-run = flip runStateT
+run :: Stack -> M a -> [(a, Stack)]
+run s m = runStateT m s
 
 -- First-Order Default Evaluation
-eval :: K a a -> [(a,Stack)] 
+eval :: K (M b) (M a) a -> [(b, Stack)]
 eval = run [] . lower
 
 -- Second-Order Default Evaluation
-eeval :: K a (K a a) -> [(a, Stack)]
+eeval :: K (M b) r (K r (M a) a) -> [(b, Stack)]
 eeval = run [] . llower
+-- ------------------------------------------------
 
 
 -- Scope Capture
@@ -185,50 +200,50 @@ eeval = run [] . llower
 -- force evaluation of quantificational constituents, delimiting their scope
 
 -- First-Order Reset
-res :: K a a -> K r a
-res = lift . lower
+res :: K (M r) (M a) a -> K (M r') (M r') r
+res = ixlift . lower
 -- equivalent to:
--- res m = ContT $ \k -> do x <- lower m
---                          k x
+-- res m = ixcont $ \k -> do x <- lower m
+--                           k x
 -- ignoring type constructors:
 --       = \k -> m unit --@ k
 --       = \k s -> concat [k x s' | (x,s') <- m unit s]
 
 -- Second-Order Total Reset
-rres :: K a (K a a) -> K r' (K r a)
-rres = ppure . lift . llower
+rres :: K (M b) r (K r (M a) a) -> K (M u) (M u) (K (M r') (M r') b)
+rres = kkunit . ixlift . llower
 -- ignoring type constructors:
--- rres = \M c -> llower M --@ \a -> c (pure a)
---      = \M c s -> concat [c (pure m) s' | (m,s') <- llower M s]
+-- rres = \M c -> llower M --@ \a -> c (kunit a)
+--      = \M c s -> concat [c (kunit m) s' | (m,s') <- llower M s]
 
 -- Second-Order Inner Reset
-rres1 :: K r (K a a) -> K r (K r' a)
-rres1 = liftM res
+rres1 :: K t s (K (M r) (M a) a) -> K t s (K (M r') (M r') r)
+rres1 = ixliftM res
 -- equivalent to:
 -- rres1 = \mm -> $ do m <- mm
---                     pure (res m)
+--                     kunit (res m)
 -- ignoring type constructors:
 --       = \M c -> M (\m -> c (res m))
 
 -- Second-Order Staged Reset (preserves scopal structure)
 -- note that this won't type out for 3-level towers topped by universals;
 -- they'll be forced to use the total reset
-rres2 :: K (K r a) (K a a) -> K r' (K r a)
-rres2 = res . liftM res
+rres2 :: K (M u) (M (K (M r) (M r) r)) (K (M r) (M a) a) -> K (M r') (M r') u
+rres2 = res . rres1
 -- equivalent to:
--- rres2 = \mm -> reset $ do m <- mm
---                           pure (reset m)
+-- rres2 = \mm -> res $ do m <- mm
+--                         kunit (res m)
 -- ignoring type constructors:
---       = \M -> lift $ M (\m -> unit (reset m))
---       = \M c s -> concat [c m s' | (m,s') <- M (unit . reset) s]
+--       = \M -> lift $ M (\m -> unit (res m))
+--       = \M c s -> concat [c m s' | (m,s') <- M (unit . res) s]
+-- ------------------------------------------------
 
 
 -- Stack Update
 -- ------------------------------------------------
 -- extract drefs from continuized individuals and append them to the stack
 
--- Push in the State Monad
-_up :: D Ent -> D Ent
+_up :: M Ent -> M Ent
 _up m = do x <- m
            modify (++[x])
            unit x
@@ -236,39 +251,25 @@ _up m = do x <- m
 --    = \s -> [(x, s'++[x]) | (x,s') <- m s]
 
 -- First-Order Push
-up :: E r -> E r
-up = withContT $ \k x -> k x `butWith` (++[x])
-  where butWith = flip withStateT
+up :: K r (M o) Ent -> K r (M o) Ent
+up m = m --* \x -> ixlift (modify (++[x])) --* \_ -> kunit x
 -- equivalent to:
 -- up m = do x <- m
---           lift (modify (++[x]))
---           pure x
+--           ixlift (modify (++[x]))
+--           kunit x
 -- ignoring type constructors:
---      = \k -> m (\x s -> k x (s++[x]))
+--   = \k -> m (\x s -> k x (s++[x]))
 
 -- Second-Order Push
-uup :: K r' (E r) -> K r' (E r)
-uup = liftM up
+uup :: K t s (K r (M o) Ent) -> K t s (K r (M o) Ent)
+uup = ixliftM up
 -- equivalent to:
 -- uup = ((unit up) ~/~)
 --     = \mm -> do m <- mm
---                 pure (up m)
+--                 kunit (up m)
 -- ignoring type constructors:
 --     = \M k -> M (\m -> k (up m))
 
-
--- =========================
--- ** AUXILIARY FUNCTIONS **
--- =========================
-
--- Backwards function application
-(<$) :: a -> (a -> b) -> b
-a <$ b = b a
-
--- Stack difference
--- (this really only makes sense if stacks are the same length) 
-minus :: Stack -> Stack -> Stack
-s1 `minus` s2 = take ((length s1) - (length s2)) s1
 
 
 -- ==================
@@ -280,15 +281,15 @@ s1 `minus` s2 = take ((length s1) - (length s2)) s1
 
 -- Transitive Verbs
 -- ------------------------------------------------
-likes, envies, pities, listensTo, overwhelm :: EET r
+likes, envies, pities, listensTo, overwhelm :: EET (M r)
 [likes, envies, pities, listensTo, overwhelm] =
-  map pure [_likes, _envies, _pities, _listensTo, _overwhelm]
+  map kunit [_likes, _envies, _pities, _listensTo, _overwhelm]
 -- ------------------------------------------------
 
 -- Ditransitive Verbs
 -- ------------------------------------------------
-gave :: EEET r
-gave = pure _gave
+gave :: EEET (M r)
+gave = kunit _gave
 -- ------------------------------------------------
 
 
@@ -297,17 +298,17 @@ gave = pure _gave
 
 -- Boolean Operators
 -- ------------------------------------------------
-conj :: TTT r
-conj = pure (&&)
+conj :: TTT (M r)
+conj = kunit (&&)
 
-disj :: MonadPlus m => m a -> m a -> m a
-disj = mplus
+disj :: IxMonadPlus m => m i j a -> m i j a -> m i j a
+disj = implus
 
-_neg :: D Bool -> D Bool
+_neg :: M Bool -> M Bool
 _neg m = StateT $ \s -> [(not $ any fst $ run s m, s)]
 
-neg :: T Bool -> T Bool
-neg m = lift $ _neg (lower m)
+neg :: K (M r) (M r) (M Bool -> M Bool)
+neg = kunit _neg
 -- ------------------------------------------------
 
 
@@ -316,22 +317,14 @@ neg m = lift $ _neg (lower m)
 
 -- Intersective Adjectives
 -- ------------------------------------------------
-short, tall :: K r ((Ent -> Bool) -> Ent -> Bool)
-[short, tall] = map pure [_short, _tall]
+short, tall :: K (M r) (M r) ((Ent -> Bool) -> Ent -> Bool)
+[short, tall] = map kunit [_short, _tall]
 -- ------------------------------------------------
 
 -- Relational Adjectives
 -- ------------------------------------------------
-fav :: K r ((Ent -> Bool) -> Ent -> Ent)
-fav = pure _fav
--- ------------------------------------------------
-
--- Abbreviations
-tb,tg,sb,sg :: ET r
-tb = tall ~/~ boy
-tg = tall ~/~ girl
-sb = short ~/~ boy
-sg = short ~/~ girl
+fav :: K (M r) (M r)  ((Ent -> Bool) -> Ent -> Ent)
+fav = kunit _fav
 -- ------------------------------------------------
 
 
@@ -339,8 +332,8 @@ sg = short ~/~ girl
 -- ============
 
 -- ------------------------------------------------
-of_ :: K r ((Ent -> Bool) -> Ent -> Ent -> Bool)
-of_ = pure _of
+of_ :: K (M r) (M r) ((Ent -> Bool) -> Ent -> Ent -> Bool)
+of_ = kunit _of
 -- ------------------------------------------------
 
 
@@ -349,25 +342,25 @@ of_ = pure _of
 
 -- Proper Names
 -- ------------------------------------------------
-b1, b2, b3, b4, b5, b6 :: E r
-[b1, b2, b3, b4, b5, b6] = map pure boys
+b1, b2, b3, b4, b5, b6 :: E (M r)
+[b1, b2, b3, b4, b5, b6] = map kunit boys
 
-g1, g2, g3, g4, g5, g6 :: E r
-[g1, g2, g3, g4, g5, g6] = map pure girls
+g1, g2, g3, g4, g5, g6 :: E (M r)
+[g1, g2, g3, g4, g5, g6] = map kunit girls
 
-p1, p2, p3, p4, p5, p6 :: E r
-[p1, p2, p3, p4, p5, p6] = map pure poems
+p1, p2, p3, p4, p5, p6 :: E (M r)
+[p1, p2, p3, p4, p5, p6] = map kunit poems
 -- ------------------------------------------------
 
 -- Pronouns
 -- ------------------------------------------------
 -- pronouns are indexed from the back of the stack;
 -- out-of-bounds indices throw "Assertion failed" errors :)
-_pro :: Int -> D Ent
+_pro :: Int -> M Ent
 _pro n = gets $ \s -> assert (length s >= n + 1) $ reverse s !! n
 
-pro :: Int -> E r
-pro n = lift (_pro n)
+pro :: Int -> E (M r)
+pro n = ixlift (_pro n)
 -- equivalent to:
 -- pro n = lift $ do s <- iget
 --                   unit (reverse s !! n)
@@ -375,14 +368,21 @@ pro n = lift (_pro n)
 --       = \k -> \s -> k (reverse s !! n) s
 
 -- convenience pronoun for grabbing the most recent dref
-pro0 :: E r
+pro0 :: E (M r)
 pro0 = pro 0
 -- ------------------------------------------------
 
 -- Common Nouns
 -- ------------------------------------------------
-boy, girl, poem, thing :: ET r
-[boy, girl, poem, thing] = map pure [_boy, _girl, _poem, _thing]
+boy, girl, poem, thing :: ET (M r)
+[boy, girl, poem, thing] = map kunit [_boy, _girl, _poem, _thing]
+
+-- Abbreviations
+tb,tg,sb,sg :: ET (M r)
+tb = tall ~/~ boy
+tg = tall ~/~ girl
+sb = short ~/~ boy
+sg = short ~/~ girl
 -- ------------------------------------------------
  
 -- Plurals
@@ -395,44 +395,66 @@ oplus (Plur xs) y@(Atom _)  = Plur (xs++[y])
 oplus (Plur xs) (Plur ys)   = Plur (xs++ys)
 
 -- Abbreviations
-p123, b123 :: Ent
+_p123, _b123 :: Ent
 -- p123 abbreviates the collective of poems +p1+p2+p3, b123 the collective of
 -- boys +b1+b2+b3
-p123 = foldr1 oplus [_p1,_p2,_p3]
-b123 = foldr1 oplus [_b1,_b2,_b3]
+_p123 = foldr1 oplus [_p1,_p2,_p3]
+_b123 = foldr1 oplus [_b1,_b2,_b3]
+
+p123, b123 :: E (M r)
+[p123, b123] = map kunit [_p123, _b123]
 -- ------------------------------------------------
 
 
 -- DETERMINERS
 -- ===========
--- can't tease the quantifiers into the ContT monad because their intermediate
--- and return types don't match! see IxContGrammar.hs
--- here, we just pass restrictors in directly, and ignore relative clauses
 
 -- Indefinites
 -- ------------------------------------------------
-_some :: (Ent -> D Bool) -> D Ent
+_some :: (Ent -> M Bool) -> M Ent
 _some p = do x <- lift domAtoms
              p x --@ guard
              unit x
 
-some :: ET r -> E r
-some p = do x <- lift $ lift domAtoms
-            (p ~/~ pure x) --* guard
-            pure x
+some :: K (M Ent) (M Bool) Ent
+some = ixcont _some
+-- ignoring type constructors:
+--   = \k s -> concat [k x s' | x <- domAtoms, (b,s') <- p x s, b]
 -- ------------------------------------------------
- 
+
 -- Universals
 -- ------------------------------------------------
-every :: ET Bool -> E Bool
-every p = ContT $ \k -> lower $ neg $ some p --* neg . lift . k
+_every :: (Ent -> M Bool) -> E (M Bool)
+_every p = ixcont $ \k -> _neg $ _some p --@ _neg . k
+
+every :: K (E (M Bool)) (M Bool) Ent
+every = ixcont _every
 -- ------------------------------------------------
 
 -- Possessives
 -- ------------------------------------------------
-poss :: E r -> ET r' -> K r (E r')
-poss g p = pure some ~/~ ((pure p ~\\~ pure of_) ~//~ ppure g)
+-- poss :: E r -> ET r -> K r (E r)
+-- poss :: E r -> K (M Bool) o (Ent -> Bool) -> K r r (K (M Ent) o Bool)
+poss :: E (M r) -> ET (M Bool) -> K (M r) (M r) (K (M Ent) (M Bool) Bool)
+poss g p = kunit some ~\\~ ((kunit p ~\\~ kunit of_) ~//~ kkunit g)
 -- ------------------------------------------------
+
+
+-- RELATIVE CLAUSES
+-- ================
+
+_gap :: Int -> M Ent
+_gap = _pro
+
+gap :: Int -> E (M r)
+gap = pro
+
+_that :: Bool -> Bool -> Bool
+_that = (&&)
+
+that :: TTT (M r)
+that = conj
+
 
 
 -- ==============
@@ -447,36 +469,42 @@ Basic Sentences
 eval $ up b4 ~\~ tb
 
 "Boy1 is short and Boy5 is tall"
-eval $ (res $ up b1 ~\~ sb) ~\~ conj ~/~ (res $ up b5 ~\~ tb)
+eval $ (up b1 ~\~ sb) ~\~ conj ~/~ up b5 ~\~ tb
 
 "Some boy is tall"
-eval $ (up $ some boy) ~\~ tb
+eval $ (res $ up some ~\~ boy) ~\~ tb
 
 "Some tall boy likes some tall girl"
-eval $ (up $ some tb) ~\~ likes ~/~ (up $ some tg)
+eval $ (res $ up some ~\~ tb) ~\~ likes ~/~ (res $ up some ~\~ tg)
 
 
 Basic Anaphora
 --------------
 "Boy 4 likes his poem"
-eeval $ (ppure $ up b4) ~\\~ pure likes ~//~ (uup $ poss pro0 poem)
+eeval $ (kkunit $ up b4) ~\\~ kunit likes ~//~ (uup $ rres1 $ poss pro0 poem)
 
 "Boy 1 is short and he is tall"
-eval $ (up b1 ~\~ sb) ~\~ conj ~/~ pro0 ~\~ tb
+eval $ (res $ up b1 ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
 
 "Some boy is short and he is tall"
-eval $ (res $ (up $ some boy) ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
+eval $ (res $ (res $ up some ~\~ boy) ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
 
 "Every boy is short and he is tall" [Binding failure]
-eval $ (res $ (up $ every boy) ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
+eval $ (res $ (lower $ up every ~\~ boy) ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
 
 
 Inverse Scope
 -------------
 "Some tall boy likes every tall girl" [surface scope]
-eval $ (up $ some tb) ~\~ likes ~/~ (up $ every tg)
+eval $ (res $ up some ~\~ tb) ~\~ likes ~/~ (lower $ up every ~\~ tg)
 
 "Some tall boy likes every tall girl" [inverse scope]
-eeval $ (pure $ up $ some tb) ~\\~ pure likes ~//~ (ppure $ up $ every tg)
+eeval $ (kunit $ res $ up some ~\~ tb) ~\\~ kunit likes ~//~ (kkunit $ lower $ up every ~\~ tg)
+
+
+Complex DPs
+-----------
+"Every boy that Girl3 likes is short"
+eval $ (lower $ (up every ~\~ boy) ~\~ that ~/~ (res $ up g3 ~\~ likes ~/~ gap 1) ) ~\~ sb
 
 -}

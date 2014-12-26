@@ -1,4 +1,4 @@
-module IxPrelude where
+module ExcScope.IxPrelude where
 
 import Control.Monad.Indexed
 import Control.Monad.Indexed.Cont

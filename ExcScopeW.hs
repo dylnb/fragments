@@ -1,11 +1,11 @@
-module IxContW where
+module ExcScopeW where
 
 -- A port of the monadic denotational semantics for a fragment of English, as
 -- presented in Charlow 2014: "On the semantics of exceptional scope",
 -- extended with intensional meanings
 
-import IxPrelude
-import WModel
+import ExcScope.IxPrelude
+import ExcScope.WModel
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.List
@@ -44,24 +44,28 @@ type TTT r   = K r r (Bool -> Bool -> Bool)
 unit :: a -> D a
 unit = return
 -- ignoring type constructors:
--- unit x = \s -> [(x,s)]
+-- unit x = \s _ -> [(x,s)]
 
 (--@) :: D a -> (a -> D b) -> D b
 (--@) = (>>=)
 -- ignoring type constructors:
--- m --@ f = \s -> concat [f x s' | (x,s') <- m s]
+-- m --@ f = \s w -> concat [f x s' w | (x,s') <- m s w]
 infixl 1 --@
 
 -- 'ixlift' is semantically equivalent to (--@), but adds a type constructor
 -- around the continuation
 ixlift :: D a -> K (D b) (D b) a
 ixlift m = ixcont $ \k -> m --@ k
+-- ignoring type constructors:
+-- ixlift m = \k s w -> concat [k x s' w | (x,s') <- m s w]
 
 iixlift :: K r r (D a) -> K r r (K (D b) (D b) a)
 iixlift = liftM ixlift
 
 wlift :: (World -> a) -> K (D r) (D r) a
 wlift = ixlift . lift . lift
+-- ignoring type constructors:
+-- wlift phi = \k s w -> k (phi w) s w
 
 -- Scope Sequencing Combinator
 (--*) :: K r o a -> (a -> K o r' b) -> K r r' b
@@ -77,23 +81,23 @@ infixl 1 --*
 -- inject values into trivial (pure) computations
 
 -- First-Order Scope ("Montague lift")
-pure :: a -> K (D r) (D r) a 
-pure = return
+kunit :: a -> K (D r) (D r) a 
+kunit = return
 -- equivalent to:
--- pure = lift . unit
+-- kunit = lift . unit
 --   (where 'lift' is the transformer of the K type: \m k -> m --@ k)
 -- ignoring type constructors:
---      = \x k -> k x
+--       = \x k -> k x
   
 -- Second-Order Scope ("Internal lift")
-ppure :: K r r a -> K r r (K (D r') (D r') a)
-ppure = liftM pure
+kkunit :: K r r a -> K r r (K (D r') (D r') a)
+kkunit = liftM kunit
 -- equivalent to:
--- ppure m = pure pure ~/~ m
---         = do x <- m
---              pure $ pure x
+-- kkunit m = kunit kunit ~/~ m
+--          = do x <- m
+--               kunit $ kunit x
 -- ignoring type constructors:
---         = \c -> m (\x -> c (pure x))
+--          = \c -> m (\x -> c (kunit x))
 -- ------------------------------------------------
 
 
@@ -108,7 +112,7 @@ lap = ixliftM2 (flip ($))
 -- equivalent to:
 -- lap = \m h -> do x <- m
 --                  f <- h
---                  pure (f x)
+--                  kunit (f x)
 -- ignoring type constructors:
 --     = \m h k -> m (\x -> h (\f -> k (f x)))
 
@@ -117,7 +121,7 @@ rap = ixliftM2 ($)
 -- equivalent to:
 -- rap = \h m -> do f <- h
 --                  x <- m
---                  pure (f x)
+--                  kunit (f x)
 -- ignoring type constructors:
 --     = \h m k -> h (\f -> m (\x -> k (f x)))
 
@@ -129,7 +133,7 @@ llap = ixliftM2 lap
 -- equivalent to:
 -- llap = \M H -> do m <- M
 --                   h <- H
---                   pure (m `lap` h)
+--                   kunit (m `lap` h)
 -- ignoring type constructors:
 --      = \M H k -> M (\m -> H (\h -> k (m `lap` h)))
 
@@ -138,7 +142,7 @@ rrap = ixliftM2 rap
 -- equivalent to:
 -- rrap = \H M -> do h <- H
 --                   m <- M
---                   pure (h `rap` m)
+--                   kunit (h `rap` m)
 -- ignoring type constructors:
 --      = \H M k -> H (\h -> M (\m -> k (h `rap` m)))
 
@@ -171,7 +175,7 @@ infixr 9 ~\\~
 lower :: K r (D a) a -> r
 lower m = runIxCont m unit
 -- ignoring type constructors:
--- lower = pure unit
+-- lower = kunit unit
 --       = \m -> m unit
 
 -- Second-Order (Total) Lower
@@ -182,7 +186,7 @@ llower mm = runIxCont mm lower
 --   (where 'join' is the join of the Cont monad: \M -> M --* id)
 --        = \mm -> flip runIxCont unit $ do m <- mm; m
 -- ignoring type constructors:
--- llower = pure lower
+-- llower = kunit lower
 --        = \M -> M (\m -> m unit)
 
 llower1 :: K t r' (K r (D a) a) -> K t r' r
@@ -218,17 +222,17 @@ res = ixlift . lower
 
 -- Second-Order Total Reset
 rres :: K (D b) r (K r (D a) a) -> K (D u) (D u) (K (D r') (D r') b)
-rres = ppure . ixlift . llower
+rres = kkunit . ixlift . llower
 -- ignoring type constructors:
--- rres = \M c -> llower M --@ \a -> c (pure a)
---      = \M c s -> concat [c (pure m) s' | (m,s') <- llower M s]
+-- rres = \M c -> llower M --@ \a -> c (kunit a)
+--      = \M c s -> concat [c (kunit m) s' | (m,s') <- llower M s]
 
 -- Second-Order Inner Reset
 rres1 :: K t s (K (D r) (D a) a) -> K t s (K (D r') (D r') r)
 rres1 = ixliftM res
 -- equivalent to:
 -- rres1 = \mm -> $ do m <- mm
---                     pure (res m)
+--                     kunit (res m)
 -- ignoring type constructors:
 --       = \M c -> M (\m -> c (res m))
 
@@ -239,7 +243,7 @@ rres2 :: K (D u) (D (K (D r) (D r) r)) (K (D r) (D a) a) -> K (D r') (D r') u
 rres2 = res . rres1
 -- equivalent to:
 -- rres2 = \mm -> res $ do m <- mm
---                         pure (res m)
+--                         kunit (res m)
 -- ignoring type constructors:
 --       = \M -> lift $ M (\m -> unit (res m))
 --       = \M c s -> concat [c m s' | (m,s') <- M (unit . res) s]
@@ -259,11 +263,11 @@ _up m = do x <- m
 
 -- First-Order Push
 up :: K r (D o) Ent -> K r (D o) Ent
-up m = m --* \x -> ixlift (modify (++[x])) --* \_ -> pure x
+up m = m --* \x -> ixlift (modify (++[x])) --* \_ -> kunit x
 -- equivalent to:
 -- up m = do x <- m
 --           ixlift (modify (++[x]))
---           pure x
+--           kunit x
 -- ignoring type constructors:
 --     = \k -> m (\x s -> k x (s++[x]))
 
@@ -273,7 +277,7 @@ uup = ixliftM up
 -- equivalent to:
 -- uup = ((unit up) ~/~)
 --     = \mm -> do m <- mm
---                 pure (up m)
+--                 kunit (up m)
 -- ignoring type constructors:
 --     = \M k -> M (\m -> k (up m))
 
@@ -310,7 +314,7 @@ _thinks m = do s <- get
                              -- everybody's omniscient
 
 thinks :: K (D r) (D r) (D Bool -> D (Ent -> Bool))
-thinks = pure _thinks
+thinks = kunit _thinks
 -- ------------------------------------------------
 
 
@@ -320,7 +324,7 @@ thinks = pure _thinks
 -- Boolean Operators
 -- ------------------------------------------------
 conj :: TTT (D r)
-conj = pure (&&)
+conj = kunit (&&)
 
 disj :: IxMonadPlus m => m i j a -> m i j a -> m i j a
 disj = implus
@@ -331,7 +335,7 @@ _neg m = do s <- get
             unit $ not $ any fst $ run s w m
 
 neg :: K (D r) (D r) (D Bool -> D Bool)
-neg = pure _neg
+neg = kunit _neg
 -- ------------------------------------------------
 
 
@@ -460,7 +464,7 @@ every = ixcont _every
 -- poss :: E r -> ET r -> K r (E r)
 -- poss :: E r -> K (D Bool) o (Ent -> Bool) -> K r r (K (D Ent) o Bool)
 poss :: E (D r) -> ET (D Bool) -> K (D r) (D r) (K (D Ent) (D Bool) Bool)
-poss g p = pure some ~\\~ ((pure p ~\\~ pure of_) ~//~ ppure g)
+poss g p = kunit some ~\\~ ((kunit p ~\\~ kunit of_) ~//~ kkunit g)
 -- ------------------------------------------------
 
 
@@ -505,7 +509,7 @@ eval $ (res $ up some ~\~ tb) ~\~ likes ~/~ (res $ up some ~\~ tg)
 Basic Anaphora
 --------------
 "Boy 4 likes his poem"
-eeval $ (ppure $ up b4) ~\\~ pure likes ~//~ (uup $ rres1 $ poss pro0 poem)
+eeval $ (kkunit $ up b4) ~\\~ kunit likes ~//~ (uup $ rres1 $ poss pro0 poem)
 
 "Boy 1 is short and he is tall"
 eval $ (res $ up b1 ~\~ sb) ~\~ conj ~/~ (res $ pro0 ~\~ tb)
@@ -523,7 +527,7 @@ Inverse Scope
 eval $ (res $ up some ~\~ tb) ~\~ likes ~/~ (lower $ up every ~\~ tg)
 
 "Some tall boy likes every tall girl" [inverse scope]
-eeval $ (pure $ res $ up some ~\~ tb) ~\\~ pure likes ~//~ (ppure $ lower $ up every ~\~ tg)
+eeval $ (kunit $ res $ up some ~\~ tb) ~\\~ kunit likes ~//~ (kkunit $ lower $ up every ~\~ tg)
 
 
 Complex DPs
@@ -535,13 +539,13 @@ eval $ ( lower $ (up every ~\~ boy) ~\~ that ~/~ (res $ up g3 ~\~ likes ~/~ gap 
 Attitudes
 ---------
 "Boy3 thinks Girl2 is short"
-eval $ up b3 ~\~ (ixlift $ llower $ iixlift $ thinks ~/~ (pure $ lower $ res $ up p2 ~\~ sg))
+eval $ up b3 ~\~ (ixlift $ llower $ iixlift $ thinks ~/~ (kunit $ lower $ res $ up p2 ~\~ sg))
 
 "Boy3 thinks some girl is short" [surface scope]
-eval $ up b3 ~\~ (ixlift $ llower $ iixlift $ thinks ~/~ (pure $ lower $ res $ (res $ up some ~\~ girl) ~\~ sg))
+eval $ up b3 ~\~ (ixlift $ llower $ iixlift $ thinks ~/~ (kunit $ lower $ res $ (res $ up some ~\~ girl) ~\~ sg))
 
 "Boy3 thinks some poem is short" [inverse scope]
-eval $ up b3 ~\~ (ixlift $ llower $ iixlift $ thinks ~/~ (llower1 $ ppure $ res $ (res $ up some ~\~ girl) ~\~ sg))
+eval $ up b3 ~\~ (ixlift $ llower $ iixlift $ thinks ~/~ (llower1 $ kkunit $ res $ (res $ up some ~\~ girl) ~\~ sg))
 
 
 -}

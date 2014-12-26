@@ -1,4 +1,4 @@
-module Model where
+module ExcScope.Model where
 
 data Ent = Atom (String,Int)
          | Plur {atoms :: [Ent]}
