@@ -1,0 +1,52 @@
+\documentclass[12pt,fleqn]{article}
+
+\input{preamble}
+\geometry{landscape, vmargin=0.5in, hmargin=1in}
+\setlength{\parindent}{0pt}
+\setlength{\mathindent}{0pt}
+
+\newcommand{\M}{\text{\sffamily\bfseries M}}
+
+\begin{document}
+
+\begin{align*}
+  \M_u^f &=
+  \lambda G \dt
+    \set{%
+      \pair{\cn{T}}{g}
+    \giv
+      \pair{\cn{T}}{g} \in G
+      \land
+      \neg\exists\pair{\cn{T}}{g'} \in G \dt f\,(g\,u)\,(g'\,u)
+    } \\
+  %
+  \cn{larger} &=
+  \lambda xy \dt \cn{size}\,x < \cn{size}\,y \\
+  %
+  \cn{est}_u &=
+  \lambda f \dt \M_u^f\\
+  %
+  \cn{largest}_u &=
+  \cn{est}_u\,\cn{larger} =
+  \M_u^\cn{sz} =
+  \lambda G \dt
+    \set{%
+      \pair{\cn{T}}{g}
+    \giv
+      \pair{\cn{T}}{g} \in G
+      \land
+      \neg\exists\pair{\cn{T}}{g'} \in G \dt
+        \cn{size}\,(g\,u) < \cn{size}\,(g'\,u)
+    } \\
+  %
+  \cn{the}_u &=
+  \lambda \M ckg \col |G'_u| = 1 \dt G',
+  \textrm{ where }
+  G' = \M \bigcup \set{%
+    k\,x\,g'
+  \giv
+    x\in \mathcal{D}_e,\ \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
+  } \\
+\end{align*}
+
+\end{document}

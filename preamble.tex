@@ -1,0 +1,275 @@
+
+%%%%% deal with the excessive number of packages %%%%%
+\usepackage{etex}
+
+\usepackage{silence} % suppres font shape warnings
+  \WarningFilter{latexfont}{Font shape}
+\usepackage{ifthen} % for conditional macros
+
+%%%%% general math %%%%%
+\usepackage[tbtags]{mathtools} % loads amsmath
+\usepackage{amssymb,stmaryrd}
+  % \SetSymbolFont{stmry}{bold}{U}{stmry}{m}{n}
+\usepackage{relsize} % change size of math operators
+\usepackage{exscale} % change size of math operators arbitrarily
+
+%%% all-purpose math macros
+% set comprehension: \set{ ... \giv ... } = { ... | ... }
+\providecommand{\giv}{}
+\DeclarePairedDelimiterX\SET[1]\{\}{%
+  \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
+  #1
+}
+\newcommand{\set}[1]{\SET*{#1}}
+% grand union: \uset{ ... \giv ... } = U{ ... | ... }
+% \DeclarePairedDelimiterXPP\USET[1]{\bigcup}{\{}{\}}{}{%
+%   \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
+%   #1
+% }
+% \newcommand{\uset}[1]{\USET*{#1}}
+% pairs: \pair{..}{..} = <.., ..>
+\DeclarePairedDelimiterX\PAIR[1]\langle\rangle{#1}
+\newcommand{\pair}[2]{\PAIR*{#1,\ppt #2}}
+\newcommand{\thickpair}[2]{\PAIR*{#1,\ \ #2}}
+\newcommand{\typepair}[2]{\PAIR*{#1 \ast #2}}
+
+
+%%%%% examples, lists, footnotes, citations %%%%%
+\usepackage[bottom,multiple]{footmisc} % force footnotes to bottom of page
+\usepackage{enumitem} % customize lists
+\usepackage{epltxfn} % expex examples in footnotes
+\usepackage{expex} % for example sentences
+\newcommand{\excite}[3][]{% citation at right edge of example
+  \ifthenelse{\equal{#1}{}}{% no opt arg (no prefix) 
+    \ifthenelse{\equal{#3}{ibid}}{% no reference to look up
+      \rightcomment{[\textit{ibid}:~#2]}
+    }{% look up reference
+      \rightcomment{[\citealt[#2]{#3}]}
+    }
+  }{% optional argument present
+    \ifthenelse{\equal{#1}{citealias}}{% use citealias
+      \rightcomment{[\citetalias{#3}:~#2]}
+    }{% set opt arg as citation prefix
+      \ifthenelse{\equal{#3}{ibid}}{% no reference to look up
+        \rightcomment{[#1 \textit{ibid}:~#2]}
+      }{% look up reference
+        \rightcomment{[#1 \citealt[#2]{#3}]}
+      }
+    }
+  }
+}
+% inline citation style abbreviations
+\usepackage{natbib}
+  \bibpunct[: ]{(}{)}{,}{a}{}{,}
+  \newcommand{\BIBand}{\&}
+  \setlength{\bibsep}{0pt}
+  \setlength{\bibhang}{0.25in}
+  \bibliographystyle{sp}
+  \newcommand{\posscitet}[1]{\citeauthor{#1}'s (\citeyear{#1})}
+  \newcommand{\possciteauthor}[1]{\citeauthor{#1}'s}
+  \newcommand{\pgposscitet}[2]{\citeauthor{#1}'s (\citeyear{#1}:~#2)}
+  \newcommand{\secposscitet}[2]{\citeauthor{#1}'s (\citeyear{#1}:~$\S$#2)}
+  \newcommand{\pgcitealt}[2]{\citealt{#1}:~#2}
+  \newcommand{\seccitealt}[2]{\citealt{#1}:~$\S$#2}
+  \newcommand{\pgcitep}[2]{(\citealt{#1}:~#2)}
+  \newcommand{\seccitep}[2]{(\citealt{#1}:~$\S$#2)}
+  \newcommand{\pgcitet}[2]{\citeauthor{#1} (\citeyear{#1}:~#2)}
+  \newcommand{\seccitet}[2]{\citeauthor{#1} (\citeyear{#1}:~$\S$#2)}
+
+
+
+%%%%% tables %%%%%
+\usepackage{array} % more control over column styles
+\usepackage{booktabs} % better rules
+
+%%% array columns without spaces
+\newcolumntype{L}{@{}l@{}}
+\newcolumntype{R}{@{}r@{}}
+\newcolumntype{C}{@{}c@{}}
+
+
+
+%%%%% layout and formatting %%%%%
+\usepackage[margin=1in]{geometry} % margins
+\usepackage{sectsty} % customize section title appearance
+  \allsectionsfont{\normalsize}
+
+%%% customize the abstract
+\newcommand{\frontmatterspacing}[1]{%
+  \small
+  \topsep 10pt
+  \advance\topsep by 3.5ex plus -1ex minus -0.2ex
+  \setlength{\listparindent}{0em}
+  \setlength{\itemindent}{0em}
+  \setlength{\leftmargin}{#1}
+  \setlength{\rightmargin}{\leftmargin}
+  \setlength{\parskip}{0em}
+}
+\renewenvironment{abstract}{%
+  \list{}{\frontmatterspacing{0.25in}}%
+  \item\relax\textbf{\abstractname}
+}{\endlist}
+
+%%% font preferences
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{libertine}
+\usepackage[libertine,liby,bigdelims]{newtxmath}
+
+%%% links
+\RequirePackage[usenames]{xcolor}
+\definecolor{splinkcolor}{rgb}{.0,.2,.4}
+\RequirePackage[colorlinks,breaklinks,
+                linkcolor=splinkcolor, 
+                urlcolor=splinkcolor, 
+                citecolor=splinkcolor,
+                filecolor=splinkcolor,
+                plainpages=false,
+                pdfpagelabels,
+                bookmarks=false,
+                pdfstartview=FitH]{hyperref}
+\newcommand{\doi}[1]{\url{http://dx.doi.org/#1}}
+\urlstyle{rm}
+\usepackage{hyperref}
+
+
+%%%%% additional symbols and macros %%%%%%
+
+%%% sp macros
+\newcommand{\sv}[1]{\llbracket #1 \rrbracket}
+\newcommand{\with}{\mathbin{\&}}
+
+%%% basic convenience macros
+\newcommand{\pt}{\hspace{1pt}}
+\newcommand{\ppt}{\hspace{2pt}}
+\newcommand{\col}{\pt{:}\ppt}
+\newcommand{\dt}{\pt{.}\ppt}
+\newcommand{\cn}[1]{{\sf #1}}
+\newcommand{\cat}{\hspace{-2pt}\cdot\hspace{-2pt}}
+\newcommand{\sto}{\mathbin{\shortrightarrow}}
+\newcommand{\must}{\mathlarger{\mathlarger{\Box}}}
+\newcommand{\rest}[2]{#1 \col #2}
+
+\newcommand*\phantomas[3][c]{% phantom to width of second arg
+   \ifmmode
+     \makebox[\widthof{$#2$}][#1]{$#3$}%
+   \else
+     \makebox[\widthof{#2}][#1]{#3}%
+   \fi
+}
+\newcommand{\objl}[1]{`#1'}
+
+%%% judgment diacritics
+\newcommand{\att}{${}^{\boldsymbol\gamma}$}
+\newcommand{\yes}{\textsuperscript{\checkmark}}
+\newcommand{\bad}{\textsuperscript{\small\#}}
+\newcommand{\mar}{\textsuperscript{?}}
+\newcommand{\ung}{*}
+
+%%% monads and towers
+\newcommand{\mtype}[2]{\mathbb{#1}_{#2}}
+\newcommand{\bind}{\star}
+\newcommand{\unit}{\eta}
+\newcommand{\nil}{\varepsilon}
+\newcommand{\fsl}{\,/\,}
+\newcommand{\bsl}{\,\backslash\,}
+\DeclareMathOperator*{\FSL}{\middle/}
+\DeclareMathOperator*{\BSL}{\middle\backslash}
+
+% bipartite 2-story tower
+\newcommand{\bitt}[2]{%
+  \ensuremath{%
+    \mathinner{%
+      \begin{tabular}[c]{@{}c@{}}
+        {\ensuremath{#1}}\\
+        \midrule
+        {\ensuremath{#2}}\\
+      \end{tabular}
+    }
+  }
+}
+% bipartite 3-story tower
+\newcommand{\bittt}[3]{%
+  \ensuremath{%
+    \mathinner{%
+      \begin{tabular}[c]{@{}c@{}}
+        {\ensuremath{#1}}\\
+        \midrule
+        {\ensuremath{#2}}\\
+        \midrule
+        {\ensuremath{#3}}\\
+      \end{tabular}
+    }
+  }
+}
+% tripartite 2-story tower
+\newcommand\tritt[3]{%
+  \ensuremath{%
+    \mathinner{
+      \begin{tabular}[c]{@{ }c@{ }}
+        \strut\ensuremath{#1}\ \hfil\vrule\hfil\ \ensuremath{#2}\\
+        \midrule
+        \strut\ensuremath{#3}\\
+      \end{tabular}
+    }
+  }
+}
+
+
+%%%%% drawing %%%%%
+\usepackage{tikz-qtree}
+
+%%% tikz (for matrices)
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
+
+%%%%% borrowed shapes from other math libraries %%%%%
+
+%%% corners and bigplus from mathabx w/o loading the whole package
+\DeclareFontFamily{U}{mathb}{}
+\DeclareFontShape{U}{mathb}{m}{n}{%
+      <5> <6> <7> <8> <9> <10> gen * mathb
+      <10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12 }{}
+\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
+\DeclareMathSymbol{\lcorners}{4}{mathb}{"76}% name to be checked
+\DeclareMathSymbol{\rcorners}{5}{mathb}{"77}% name to be checked
+\DeclareMathSymbol{\acorner}{4}{mathb}{"78}% name to be checked
+\DeclareMathSymbol{\bcorner}{5}{mathb}{"79}% name to be checked
+\DeclareMathSymbol{\ccorner}{4}{mathb}{"7A}% name to be checked
+\DeclareMathSymbol{\dcorner}{5}{mathb}{"7B}% name to be checked
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{%
+    <5> <6> <7> <8> <9> <10>
+    <10.95> <12> <14.4> <17.28> <20.74> <24.88>
+    mathx10
+}{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+\DeclareMathSymbol{\bigplus}{1}{mathx}{"90}
+
+%%% powerset symbol from mnsymbol
+\DeclareFontFamily{U}{MnSymbolC}{}
+\DeclareSymbolFont{mnsymbols}{U}{MnSymbolC}{m}{n}
+\DeclareFontShape{U}{MnSymbolC}{m}{n}{%
+<-6> MnSymbolC5
+<6-7> MnSymbolC6
+<7-8> MnSymbolC7
+<8-9> MnSymbolC8
+<9-10> MnSymbolC9
+<10-12> MnSymbolC10
+<12-> MnSymbolC12}{}
+\DeclareMathSymbol{\powerset}{\mathop}{mnsymbols}{180}
+
+%%% right triangles from wasysym
+\DeclareFontFamily{U}{wasy}{}
+\DeclareFontShape{U}{wasy}{m}{n}{%
+<-6> wasy5
+<6-7> wasy6
+<7-8> wasy7
+<8-9> wasy8
+<9-10> wasy9
+<10-> wasy10}{}
+\DeclareSymbolFont{wasy}{U}{wasy}{m}{n}
+\DeclareMathSymbol{\RHD}{\mathbin}{wasy}{"11}
+\let\rhd\undefined
+\DeclareMathSymbol\rhd{\mathbin}{wasy}{"03}
