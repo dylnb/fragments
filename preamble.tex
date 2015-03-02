@@ -12,8 +12,18 @@
   % \SetSymbolFont{stmry}{bold}{U}{stmry}{m}{n}
 \usepackage{relsize} % change size of math operators
 \usepackage{exscale} % change size of math operators arbitrarily
+% prevent align env at top of minipage from adding additional padding
+\usepackage{etoolbox}
+\makeatletter
+\pretocmd\start@align{%
+  \if@minipage\kern-\topskip\kern-\abovedisplayskip\fi
+}{}{}
+\makeatother
 
 %%% all-purpose math macros
+% parens
+\DeclarePairedDelimiterX\PARENS[1](){#1}
+\newcommand{\p}[1]{\PARENS*{#1}}
 % set comprehension: \set{ ... \giv ... } = { ... | ... }
 \providecommand{\giv}{}
 \DeclarePairedDelimiterX\SET[1]\{\}{%
@@ -22,16 +32,16 @@
 }
 \newcommand{\set}[1]{\SET*{#1}}
 % grand union: \uset{ ... \giv ... } = U{ ... | ... }
-% \DeclarePairedDelimiterXPP\USET[1]{\bigcup}{\{}{\}}{}{%
-%   \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
-%   #1
-% }
-% \newcommand{\uset}[1]{\USET*{#1}}
+\DeclarePairedDelimiterXPP\USET[1]{\bigcup}{\{}{\}}{}{%
+  \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
+  #1
+}
+\newcommand{\uset}[1]{\USET*{#1}}
 % pairs: \pair{..}{..} = <.., ..>
 \DeclarePairedDelimiterX\PAIR[1]\langle\rangle{#1}
-\newcommand{\pair}[2]{\PAIR*{#1,\ppt #2}}
+\newcommand{\pair}[2]{\PAIR*{#1,\pt #2}}
 \newcommand{\thickpair}[2]{\PAIR*{#1,\ \ #2}}
-\newcommand{\typepair}[2]{\PAIR*{#1 \ast #2}}
+\newcommand{\typepair}[2]{#1 \ast #2}
 
 
 %%%%% examples, lists, footnotes, citations %%%%%
@@ -167,6 +177,7 @@
 \newcommand{\ung}{*}
 
 %%% monads and towers
+\renewcommand{\l}{\lambda}
 \newcommand{\mtype}[2]{\mathbb{#1}_{#2}}
 \newcommand{\bind}{\star}
 \newcommand{\unit}{\eta}
