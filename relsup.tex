@@ -9,6 +9,7 @@
 \setlist{leftmargin=*}
 
 \newcommand{\M}{\text{\sffamily\bfseries M}}
+\newcommand{\F}{\text{\sffamily\bfseries F}}
 
 \begin{document}
 
@@ -116,7 +117,34 @@ This is some stuff
 
 \dotfill
 
-
-
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \bitttt{\hole}{%
+    \cn{j}^\F \star \p{\l j \dt \hole}
+  }{%
+    j^\rhd \star \p{\l x \dt \hole}
+  }{x}
+%
+\FSL{%
+  \bitttt{\hole}{\hole}{\hole}{\cn{drew}}
+}
+%
+\BSL{%
+  \bitttt{%
+    \lambda g \dt
+      \M_u \uset{%
+        \hole\,g^{u\mapsto y}
+      \giv
+        \cn{sq}\,y
+      }
+  }{\hole}{\hole}{y}
+}
+\end{align*}  
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.4\textwidth}
+stuff
+\end{minipage}
 
 \end{document}

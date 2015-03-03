@@ -12,13 +12,14 @@
   % \SetSymbolFont{stmry}{bold}{U}{stmry}{m}{n}
 \usepackage{relsize} % change size of math operators
 \usepackage{exscale} % change size of math operators arbitrarily
+\usepackage{scalerel} % change size of math delimiters
 % prevent align env at top of minipage from adding additional padding
 \usepackage{etoolbox}
-\makeatletter
-\pretocmd\start@align{%
-  \if@minipage\kern-\topskip\kern-\abovedisplayskip\fi
-}{}{}
-\makeatother
+  \makeatletter
+  \pretocmd\start@align{%
+    \if@minipage\kern-\topskip\kern-\abovedisplayskip\fi
+  }{}{}
+  \makeatother
 
 %%% all-purpose math macros
 % parens
@@ -32,7 +33,7 @@
 }
 \newcommand{\set}[1]{\SET*{#1}}
 % grand union: \uset{ ... \giv ... } = U{ ... | ... }
-\DeclarePairedDelimiterXPP\USET[1]{\bigcup}{\{}{\}}{}{%
+\DeclarePairedDelimiterXPP\USET[1]\bigcup\{\}{}{%
   \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
   #1
 }
@@ -42,7 +43,6 @@
 \newcommand{\pair}[2]{\PAIR*{#1,\pt #2}}
 \newcommand{\thickpair}[2]{\PAIR*{#1,\ \ #2}}
 \newcommand{\typepair}[2]{#1 \ast #2}
-
 
 %%%%% examples, lists, footnotes, citations %%%%%
 \usepackage[bottom,multiple]{footmisc} % force footnotes to bottom of page
@@ -182,10 +182,11 @@
 \newcommand{\bind}{\star}
 \newcommand{\unit}{\eta}
 \newcommand{\nil}{\varepsilon}
+\newcommand{\hole}{[\,]}
 \newcommand{\fsl}{\,/\,}
 \newcommand{\bsl}{\,\backslash\,}
-\DeclareMathOperator*{\FSL}{\middle/}
-\DeclareMathOperator*{\BSL}{\middle\backslash}
+\newcommand{\FSL}[1]{\stretchrel[600]{/}{#1}}
+\newcommand{\BSL}[1]{\stretchrel[600]{\backslash}{#1}}
 
 % bipartite 2-story tower
 \newcommand{\bitt}[2]{%
@@ -193,7 +194,7 @@
     \mathinner{%
       \begin{tabular}[c]{@{}c@{}}
         {\ensuremath{#1}}\\
-        \midrule
+        \hline
         {\ensuremath{#2}}\\
       \end{tabular}
     }
@@ -205,10 +206,26 @@
     \mathinner{%
       \begin{tabular}[c]{@{}c@{}}
         {\ensuremath{#1}}\\
-        \midrule
+        \hline
         {\ensuremath{#2}}\\
-        \midrule
+        \hline
         {\ensuremath{#3}}\\
+      \end{tabular}
+    }
+  }
+}
+% bipartite 4-story tower
+\newcommand{\bitttt}[4]{%
+  \ensuremath{%
+    \mathinner{%
+      \begin{tabular}[c]{@{}c@{}}
+        {\ensuremath{#1}}\\
+        \hline
+        {\ensuremath{#2}}\\
+        \hline
+        {\ensuremath{#3}}\\
+        \hline
+        {\ensuremath{#4}}\\
       \end{tabular}
     }
   }
@@ -219,7 +236,7 @@
     \mathinner{
       \begin{tabular}[c]{@{ }c@{ }}
         \strut\ensuremath{#1}\ \hfil\vrule\hfil\ \ensuremath{#2}\\
-        \midrule
+        \hline
         \strut\ensuremath{#3}\\
       \end{tabular}
     }
