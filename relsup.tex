@@ -22,14 +22,23 @@
 \begin{minipage}{0.3\textwidth}
 \begin{spreadlines}{0pt}
 \begin{align*}
-  m \fsl n &=
-  \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f\,x}}} \\
+  m \fsl n
+  &\coloneq
+  \begin{cases}
+    m\,n
+    &\textbf{if}\ m \dblcolon \alpha\sto\beta,\ n \dblcolon \alpha \\
+    \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \fsl x}}} \ 
+    &\textbf{otherwise}
+  \end{cases} \\
   %
-  m \bsl n &=
-  \l k \dt m\,\p{\l x \dt n\,\p{\l f \dt k\,\p{f\,x}}} \\
-  %
-  m^\downarrow &=
-  m\,\p{\l xs \dt \set{\pair{x}{s} \giv x \neq \cn{F}}}
+  m \bsl n
+  &\coloneq
+  \begin{cases}
+    n\,m
+    &\textbf{if}\ n \dblcolon \alpha\sto\beta,\ m \dblcolon \alpha \\
+    \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \bsl x}}} \ 
+    &\textbf{otherwise}
+  \end{cases}
 \end{align*}
 \end{spreadlines}
 \end{minipage}
@@ -37,23 +46,359 @@
 %
 \begin{minipage}{0.3\textwidth}
 \begin{spreadlines}{0pt}
-thing
+\begin{align*}
+  \eta\,x &\coloneq
+  \l g \dt \set{\pair{x}{g}} \\
+  %
+  m \bind f &\coloneq
+  \l g \dt \uset{f\,x\,g' \giv \pair{x}{g'} \in m\,g} \\
+  %
+  m^\dnar &\coloneq
+  m\,\p{\l xs \dt \set{\pair{x}{s} \giv x \neq \cn{F}}} \\
+  %
+  x^\uparrow &\coloneq
+  \l k \dt \eta\,x \bind k
+\end{align*}
+\end{spreadlines}
+\end{minipage}
+
+\dotfill
+
+\begin{minipage}[t]{0.3\textwidth}
+\begin{spreadlines}{0pt}
+\begin{align*}
+  \textbf{the}_u &\coloneq
+    \l ckg \dt |G_u| = 1 \dt G, \\
+  &\hphantom{{}\coloneq{}}
+    \text{where}\ 
+    G = \uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
+  %
+  \textbf{circle} &\coloneq
+  \cn{circ} \\
+  %
+  \textbf{square} &\coloneq
+  \cn{sq} \\
+  %
+  \textbf{in} &\coloneq
+  \cn{in}
+\end{align*}  
 \end{spreadlines}
 \end{minipage}
 %
 %
-\begin{minipage}{0.4\textwidth}
+\begin{minipage}[t]{0.7\textwidth}
 \begin{spreadlines}{0pt}
 \begin{itemize}
   \item
-    note
+    $\textbf{the}_u$ is just $\textbf{a}_u$ plus a uniqueness presupposition
+  \item
+    The presupposition restricts what the \emph{set} of outputs is allowed to
+    look like: they need to all agree on the value of $u$
+  \item
+    That means its uniqueness effect is \emph{delayed} until some program
+    containing it is evaluated, (i.e., until its continuation is delimited).
+    This sort of delayed global test on the set of outputs is very much like a
+    postsupposition (Brasoveanu 2012, Henderson 2014), but here it is
+    regulated by continuations, rather than logical subscripts (Charlow 2014)
 \end{itemize}
 \end{spreadlines}
 \end{minipage}
 
 \dotfill
 
-% \begin{vwcol}[widths={0.6,0.4},lines=7,rule=none]
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \sv{\textrm{the square}}
+  %
+  &\leadsto
+  \p{%
+    \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+    %
+    \BSL{%
+    %
+    \bitt{\hole}{\textbf{square}}
+    }
+  }^{\dnar\,\dnar\,{\bind}}
+  %
+  \leadsto
+  \p{%
+    \textbf{the}_v\,\p{\l yg \dt \set{\pair{\cn{sq}\,y}{g}}}
+  }^{\dnar\,{\bind}} \\
+  %
+  %
+  &\leadsto
+  \p{%
+    \bitt{\l g \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}}{y}
+  }^{\dnar\,{\bind}}
+  %
+  \leadsto
+  \bitt{%
+    \l g \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+  }{y}
+\end{align*}
+
+\bigskip\bigskip
+
+\begin{align*}
+  &
+  \sv{\textrm{the circle in the square}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{square}}
+        }
+      }^{\dnar\,\dnar\,{\bind}} } }
+    } }
+  }^{\dnar\,\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \bitt{%
+        \l g \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }{y}
+      } }
+    } }
+  }^{\dnar\,\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \textbf{the}_u\,\p{%
+        \l xg \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }
+    }{%
+      \cn{circ}\,x \land \cn{in}\,y\,x
+    }
+  }^{\dnar\,\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \l g \dt
+        \uset{%
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \giv
+          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+        }
+    }{x}
+  }^{\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \bitt{%
+    \l g \col |G'_u| = |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+      }
+  }{x}
+\end{align*}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.4\textwidth}
+  \begin{itemize}
+    \item
+      Note that resetting $\sv{\textrm{the square}}$ in the last reduction
+      step here has no effect on its semantic shape, because it's essentially
+      $\sv{\textrm{a square}}$
+    \item
+      But it does fix the presupposition; For any input $g$, $G =
+      \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presup will
+      require all those $g$'s to map $v$ to the same square (which is only
+      possible if there's exactly one square available to assign $v$ to in the
+      first place)
+  \end{itemize} 
+  %
+  \textbf{Absolute Reading} \\ \vdots
+  %
+  \vspace{12em}
+  %
+  \begin{itemize}
+    \item
+      Once again, resetting the outer DP just fixes its presupposition. This
+      time all the outputs need to agree on $v$, which is only possible if
+      there's exactly one circle in the square that all the outputs now assign
+      to $u$
+  \end{itemize}
+\end{minipage}
+
+\newpage
+
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  &
+  \sv{\textrm{the circle in the square}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{square}}
+        }
+      }^{\dnar} } }
+    } }
+  }^{\dnar\,\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \bitt{%
+        \l g \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }{y}
+      } }
+    } }
+  }^{\dnar\,\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \textbf{the}_u\,\p{%
+        \l xg \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }
+    }{%
+      \cn{circ}\,x \land \cn{in}\,y\,x
+    }
+  }^{\dnar\,\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \l g \dt
+        \uset{%
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \giv
+          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+        }
+    }{x}
+  }^{\dnar\,{\bind}} \\
+  %
+  %
+  &
+  \bitt{%
+    \l g \col |G_u| = |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+      }
+  }{x}
+\end{align*}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.4\textwidth}
+  \textbf{Relative Reading} (cf.\ Haddock, Champollion and Saurland)
+
+  \begin{itemize}
+    \item
+      The only difference here is that we do not reset the inner DP, which
+      staves off its presupposition until more information is accumulated in
+      its scope
+    \item
+      But now when the outer DP is reset, it sets the presuppositions
+      of \emph{both} definites
+    \item
+      For any input $g$, $G =
+      \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
+        \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
+        onto a circle in some square that it maps to $v$.
+    \item
+      So requiring that there be exactly one such $v$ is tantamount to
+      requiring that there be exactly one square \emph{that has a circle in
+      it} and exactly one circle \emph{in that square}. In other words, there
+      should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
+      such that $in\,y\,x$.
+  \end{itemize}
+\end{minipage}
+
+\newpage
+
+\begin{minipage}[t]{0.6\textwidth}
+\begin{spreadlines}{0pt}
+\begin{align*}
+  \M_u^f &\coloneq
+  \l G \dt
+    \set{%
+      \pair{\cdot}{g} \in G
+    \giv
+      \neg\exists\pair{\cdot}{g'} \in G \dt g'\,u > g\,u
+    } \\
+  %
+\end{align*}  
+\end{spreadlines}
+\end{minipage}
+
+\newpage
+
 \begin{minipage}[t]{0.6\textwidth}
 \begin{spreadlines}{0em}
 \begin{align*}
@@ -146,5 +491,61 @@ This is some stuff
 \begin{minipage}[t]{0.4\textwidth}
 stuff
 \end{minipage}
+
+\newpage
+
+\begin{spreadlines}{0pt}
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \mathcal{F}\alpha
+  &\coloneq
+  \sigma \sto \typepair{%
+    \set{\typepair{\alpha}{\sigma}}
+  }{%
+    \set{\typepair{\alpha}{\sigma}}
+  } \\
+  %
+  \eta\,x
+  &\coloneq
+  \l g \dt \pair{\set{\pair{x}{g}}}{\set{\pair{x}{g}}} \\
+  %
+  m \bind f
+  &\coloneq
+  \l g \dt
+    \thickpair{%
+      \uset{\p{f\,x\,g'}_1 \giv \pair{x}{g'} \in \p{m\,g}_1}
+    }{%
+      \uset{\p{f\,x\,g'}_2 \giv \pair{x}{g'} \in \p{m\,g}_2}
+    }
+\end{align*}
+\end{minipage}
+\end{spreadlines}
+
+\dotfill
+
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \textbf{the}
+  &\coloneq
+  \l \mathcal{M}ckg \col |G_u| = 1 \dt G_u,
+  \ \text{where} \ 
+  G = \mathcal{M}\,\uset{%
+    k\,y\,g'
+  \giv
+    \pair{\cn{T}}{g'} \in c\,y\,g^{u\mapsto y}
+  } \\
+  \textbf{only}
+  &\coloneq
+  \l G \col \cn{true}\,G \dt
+    \set{%
+      \pair{\cn{T}}{g} \in G
+    \giv
+      \neg\exists g' \dt \pair{\cn{T}}{g'} \in G \land g'\,u \sqsupset g\,u
+    }
+\end{align*}
+\end{minipage}
+
+
+
 
 \end{document}
