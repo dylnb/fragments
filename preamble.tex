@@ -184,6 +184,7 @@
 \newcommand{\nil}{\varepsilon}
 \newcommand{\dnar}{\downarrow}
 \newcommand{\upar}{\uparrow}
+\newcommand{\reset}{\downupharpoons}
 \newcommand{\hole}{[\,]}
 \newcommand{\fsl}{\,/\,}
 \newcommand{\bsl}{\,\backslash\,}
@@ -258,7 +259,8 @@
 
 %%%%% borrowed shapes from other math libraries %%%%%
 
-%%% corners and bigplus from mathabx w/o loading the whole package
+%%% corners, bigplus, harpoons from mathabx w/o loading the whole font
+% corners
 \DeclareFontFamily{U}{mathb}{}
 \DeclareFontShape{U}{mathb}{m}{n}{%
       <5> <6> <7> <8> <9> <10> gen * mathb
@@ -270,6 +272,7 @@
 \DeclareMathSymbol{\bcorner}{5}{mathb}{"79}% name to be checked
 \DeclareMathSymbol{\ccorner}{4}{mathb}{"7A}% name to be checked
 \DeclareMathSymbol{\dcorner}{5}{mathb}{"7B}% name to be checked
+% bigplus
 \DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
 \DeclareFontShape{U}{mathx}{m}{n}{%
     <5> <6> <7> <8> <9> <10>
@@ -278,6 +281,13 @@
 }{}
 \DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
 \DeclareMathSymbol{\bigplus}{1}{mathx}{"90}
+% harpoons
+\DeclareFontFamily{U}{matha}{}
+\DeclareFontShape{U}{matha}{m}{n}{%
+  <5> <6> <7> <8> <9> <10> gen * matha
+  <10.95> matha10 <12> <14.4> <17.28> <20.74> <24.88> matha12 }{}
+\DeclareSymbolFont{matha}{U}{matha}{m}{n}
+\DeclareMathSymbol{\downupharpoons}{3}{matha}{"EB}
 
 %%% powerset symbol from mnsymbol
 \DeclareFontFamily{U}{MnSymbolC}{}
@@ -305,3 +315,5 @@
 \DeclareMathSymbol{\RHD}{\mathbin}{wasy}{"11}
 \let\rhd\undefined
 \DeclareMathSymbol\rhd{\mathbin}{wasy}{"03}
+
+%%% harpoons from mathabx
