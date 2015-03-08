@@ -159,15 +159,21 @@
 \newcommand{\sto}{\mathbin{\shortrightarrow}}
 \newcommand{\must}{\mathlarger{\mathlarger{\Box}}}
 \newcommand{\rest}[2]{#1 \col #2}
-
-\newcommand*\phantomas[3][c]{% phantom to width of second arg
+\newcommand{\objl}[1]{`#1'}
+% phantom to width of second argument
+\newcommand*\phantomas[3][c]{%
    \ifmmode
      \makebox[\widthof{$#2$}][#1]{$#3$}%
    \else
      \makebox[\widthof{#2}][#1]{#3}%
    \fi
 }
-\newcommand{\objl}[1]{`#1'}
+% dots to break sections in handouts, etc
+\newcommand{\dotbreak}[1][]{%
+  \ifthenelse{\equal{#1}{}}{% no opt arg
+    \vspace{0.5em}\dotfill\vspace{0.5em}
+  }{\vspace{#1}\dotfill\vspace{#1}}
+}
 
 %%% judgment diacritics
 \newcommand{\att}{${}^{\boldsymbol\gamma}$}
@@ -236,7 +242,7 @@
   }
 }
 % tripartite 2-story tower
-\newcommand\tritt[3]{%
+\newcommand{\tritt}[3]{%
   \ensuremath{%
     \mathinner{
       \begin{tabular}[c]{@{ }c@{ }}
@@ -255,65 +261,3 @@
 %%% tikz (for matrices)
 \usepackage{tikz}
 \usetikzlibrary{calc}
-
-
-%%%%% borrowed shapes from other math libraries %%%%%
-
-%%% corners, bigplus, harpoons from mathabx w/o loading the whole font
-% corners
-\DeclareFontFamily{U}{mathb}{}
-\DeclareFontShape{U}{mathb}{m}{n}{%
-      <5> <6> <7> <8> <9> <10> gen * mathb
-      <10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12 }{}
-\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
-\DeclareMathSymbol{\lcorners}{4}{mathb}{"76}% name to be checked
-\DeclareMathSymbol{\rcorners}{5}{mathb}{"77}% name to be checked
-\DeclareMathSymbol{\acorner}{4}{mathb}{"78}% name to be checked
-\DeclareMathSymbol{\bcorner}{5}{mathb}{"79}% name to be checked
-\DeclareMathSymbol{\ccorner}{4}{mathb}{"7A}% name to be checked
-\DeclareMathSymbol{\dcorner}{5}{mathb}{"7B}% name to be checked
-% bigplus
-\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
-\DeclareFontShape{U}{mathx}{m}{n}{%
-    <5> <6> <7> <8> <9> <10>
-    <10.95> <12> <14.4> <17.28> <20.74> <24.88>
-    mathx10
-}{}
-\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
-\DeclareMathSymbol{\bigplus}{1}{mathx}{"90}
-% harpoons
-\DeclareFontFamily{U}{matha}{}
-\DeclareFontShape{U}{matha}{m}{n}{%
-  <5> <6> <7> <8> <9> <10> gen * matha
-  <10.95> matha10 <12> <14.4> <17.28> <20.74> <24.88> matha12 }{}
-\DeclareSymbolFont{matha}{U}{matha}{m}{n}
-\DeclareMathSymbol{\downupharpoons}{3}{matha}{"EB}
-
-%%% powerset symbol from mnsymbol
-\DeclareFontFamily{U}{MnSymbolC}{}
-\DeclareSymbolFont{mnsymbols}{U}{MnSymbolC}{m}{n}
-\DeclareFontShape{U}{MnSymbolC}{m}{n}{%
-<-6> MnSymbolC5
-<6-7> MnSymbolC6
-<7-8> MnSymbolC7
-<8-9> MnSymbolC8
-<9-10> MnSymbolC9
-<10-12> MnSymbolC10
-<12-> MnSymbolC12}{}
-\DeclareMathSymbol{\powerset}{\mathop}{mnsymbols}{180}
-
-%%% right triangles from wasysym
-\DeclareFontFamily{U}{wasy}{}
-\DeclareFontShape{U}{wasy}{m}{n}{%
-<-6> wasy5
-<6-7> wasy6
-<7-8> wasy7
-<8-9> wasy8
-<9-10> wasy9
-<10-> wasy10}{}
-\DeclareSymbolFont{wasy}{U}{wasy}{m}{n}
-\DeclareMathSymbol{\RHD}{\mathbin}{wasy}{"11}
-\let\rhd\undefined
-\DeclareMathSymbol\rhd{\mathbin}{wasy}{"03}
-
-%%% harpoons from mathabx

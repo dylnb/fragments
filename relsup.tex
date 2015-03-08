@@ -1,7 +1,7 @@
 \documentclass[10pt,fleqn]{article}
 
 \input{preamble}
-\usepackage{vwcol}
+\input{shapes}
 \geometry{landscape, margin=0.5in}
 \setlength{\parindent}{0pt}
 \setlength{\mathindent}{0pt}
@@ -36,7 +36,7 @@
   \begin{cases}
     n\,m
     &\textbf{if}\ n \dblcolon \alpha\sto\beta,\ m \dblcolon \alpha \\
-    \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \bsl x}}}
+    \l k \dt m\,\p{\l x \dt n\,\p{\l f \dt k\,\p{x \bsl f}}}
     &\textbf{otherwise}
   \end{cases}
 \end{align*}
@@ -45,7 +45,7 @@
 %
 %
 \begin{minipage}[t]{0.35\textwidth}
-\begin{itemize}
+  \begin{itemize}[label={}]
   \item
     The usual applicators for left and right continuized FA
   \item
@@ -57,9 +57,8 @@
 \end{itemize}
 \end{minipage}
 %
-\hspace{0.35em}
 %
-\begin{minipage}[t]{0.25\textwidth} % State.Set Grammar
+\begin{minipage}[t]{0.285\textwidth} % State.Set Grammar
 \begin{spreadlines}{0pt}
 \begin{align*}
   &&
@@ -86,17 +85,11 @@
 \end{minipage}
 
 
-\dotfill
+\dotbreak
 
 \begin{minipage}[t]{0.5\textwidth} % Basic Definite Fragment
 \begin{spreadlines}{0pt}
 \begin{align*}
-  \textbf{the}_u &\coloneq
-    \l ckg \col |G_u| = 1 \dt G, \\
-  &\hphantom{{}\coloneq \l ckg \col}
-    \text{where}\ 
-    G = \uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
-  %
   \textbf{circle} &\coloneq
   \cn{circ} \\
   %
@@ -104,7 +97,13 @@
   \cn{sq} \\
   %
   \textbf{in} &\coloneq
-  \cn{in}
+  \cn{in} \\
+  %
+  \textbf{the}_u &\coloneq
+    \l ckg \col |G_u| = 1 \dt G, \\
+  &\hphantom{{}\coloneq \l ckg \col}
+    \text{where}\ 
+    G = \uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
 \end{align*}  
 \end{spreadlines}
 \end{minipage}
@@ -127,7 +126,7 @@
 \end{spreadlines}
 \end{minipage}
 
-\dotfill
+\dotbreak
 
 \begin{minipage}[t]{0.5\textwidth} % Basic Nested Definite Derivs
 \begin{align*} % Resetting a description
@@ -232,7 +231,7 @@
   &
   \p{%
     \bitt{%
-      \l g \dt
+      \l g \col |G_v| = 1 \dt
         \uset{%
           \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
         \giv
@@ -411,7 +410,7 @@
   \end{itemize}
 \end{minipage}
 
-\dotfill
+\dotbreak
 
 \begin{minipage}[t]{0.5\textwidth} % Plural Fragment
 \begin{spreadlines}{0pt}
@@ -453,22 +452,40 @@
 \end{spreadlines}
 \end{minipage}
 
-\dotfill
+\dotbreak
 
 Derivations \dots
 
 
 \newpage
 
-\dotfill
+\dotbreak
 
-\begin{minipage}[t]{0.5\textwidth} % Only Fragment
-% \begin{spreadlines}{0pt}
+\begin{minipage}[t]{0.5\textwidth} % DP Superlative Fragment
+\begin{spreadlines}{0pt}
 \begin{align*}
-  \cn{true} &\coloneq
-  \l G \dt \bigvee\set{\alpha \giv \pair{\alpha}{g} \in G} \\
-  \textbf{only}_u &\coloneq 
-  \l G \col \cn{true}\,G \dt \M_u\,G \\
+  \M_u^f &\coloneq
+  \l G \dt
+    \set{%
+      \pair{\cdot}{g} \in G
+    \giv
+      \neg\exists\pair{\cdot}{g'} \in G \dt f\,(g'\,u)\,(g\,u)
+    } \\
+  %
+  \textbf{older} &\coloneq
+    \l xy \dt \cn{age}\,x > \cn{age}y \\
+  %
+  \textbf{est}_u &\coloneq
+  \l f \dt \M_u^f \\
+  %
+  \textbf{oldest}_u &=
+  \textbf{est}\,\textbf{older} =
+  \l G \dt
+    \set{%
+      \pair{\cdot}{g} \in G
+    \giv
+      \neg\exists\pair{\cdot}{g'} \in G \dt \cn{age}\,(g'\,u) > \cn{age}\,(g\,u)
+    } \\
   \textbf{the}_u &\coloneq
   \l \mathcal{M}ckg \dt |G_u| = 1 \dt G, \\
   &\hphantom{{}\coloneq{}}
@@ -479,37 +496,345 @@ Derivations \dots
       \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
     }
 \end{align*}
-% \end{spreadlines}
-\end{minipage}
-%
-%
-\begin{minipage}[t]{0.5\textwidth} % Only Fragment Notes
-\begin{spreadlines}{0pt}
-\begin{itemize}
-  \item
-    $\cn{true}$ is a bog standard dynamic truth predicate: true iff at least
-    one update succeeds.
-  \item
-    Adjectival $\textbf{only}$ is just $\M$ plus a presupposition (cf.\
-    Coppock and Beaver 2012, 2014)!
-  \item
-    So here's the swim move: feed $\textbf{only}$ into $\textbf{the}$, and
-    then let the scope of the exclusivity ride the scope of the determiner.
-    This will immediately predict relative readings for adj $\textbf{only}$.
-\end{itemize}
 \end{spreadlines}
 \end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % DP Superlative Notes
+\begin{itemize}
+  \item
+    $\textbf{est}$ abstracts over the ordering function that $\M$ uses to
+    compare individuals. In the case of pluralities, $\M_u$ filters away any
+    output that assigns $u$ to a \emph{smaller sum} than it could have (ie., a
+    smaller sum than one of the other outputs assigns to $u$). In the case of
+    $\textbf{oldest}$, $\M_u$ filters outputs that assign $u$ to a
+    \emph{younger} individual than they could have.
+  \item
+    And now here's the swim move: $\textbf{the}$ absorbs the max operator and
+    then carries it along for the ride. ``Absolute'' definite become absolute
+    superlatives; ``Haddock'' definites become relative superlatives. This
+    part is my favorite.
+\end{itemize}
+\end{minipage}
 
-\dotfill
+\dotbreak
 
-John sold the only cars \\
+\begin{minipage}[t]{0.5\textwidth} % DP Superlative Derivs
+\begin{align*} % Resetting a superlative
+  &
+  \sv{\textrm{the oldest squirrel}} \\
+  %
+  %
+  &\leadsto
+  \p{%
+    \bitt{\textbf{the}_v\,\M_v^\cn{ag}\,\p{\l y \dt \hole}}{y}
+    %
+    \BSL{%
+    %
+    \bitt{\hole}{\textbf{squirrel}}
+    }
+  }^{\dnar\,\reset}
+  %
+  \leadsto
+  \p{%
+    \textbf{the}_v\,\M_v^\cn{ag}\,\p{\l yg \dt \set{\pair{\cn{sq}\,y}{g}}}
+  }^\reset \\
+  %
+  %
+  &\leadsto
+  \p{%
+    \bitt{\l g \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}}{y}
+  }^\reset
+  %
+  \leadsto
+  \bitt{%
+    \l g \col |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{v\mapsto y}
+      \giv
+        \begin{array}{L}
+          \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
+        \end{array}
+      }
+  }{y}
+\end{align*}
+%
+\vspace{3em}
+%
+\begin{align*} % Absolute Superlative Deriv
+  &
+  \sv{\textrm{the circus with the oldest squirrel}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circus}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{with}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\M_v^\cn{ag}\,\p{\l y \dt \hole}}{y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{squirrel}}
+        }
+      }^{\dnar\,\reset} } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circus}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{with}}
+      %
+      \FSL{%
+      %
+      \bitt{%
+        \l g \col |G_v| = 1 \dt
+          \uset{%
+            \hole\,g^{v\mapsto y}
+          \giv
+            \begin{array}{L}
+              \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
+            \end{array}
+          }
+      }{y}
+      } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \textbf{the}_u\,\p{%
+        \l xg \col |G_v| = 1 \dt
+          \uset{%
+            \hole\,g^{v\mapsto y}
+          \giv
+            \cn{sq}\,y,\
+            \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
+          }
+      }
+    }{%
+      \cn{circ}\,x \land \cn{with}\,y\,x
+    }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \l g \col |G_v| = 1 \dt
+        \uset{%
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \giv
+          \begin{array}{L}
+          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x, \\
+          \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
+          \end{array}
+        }
+    }{x}
+  }^\reset \\
+  %
+  %
+  &
+  \bitt{%
+    \l g \col |G'_u| = |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+      \giv
+        \begin{array}{L}
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x, \\
+        \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
+        \end{array}
+      }
+  }{x}
+\end{align*}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % DP Superlative Notes
+  \begin{itemize}
+    \item
+      Resetting the superlative DP has two effects: (1) it fixes the set of
+      individuals that the superlative operator $\M$ compares, in this case
+      squirrels with respect to age; and (2) it freezes the presupposition
+      associated with the definite article.
+    \item
+      Here $G = \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y,\ \forall
+      z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y}$. This set could in principle
+      have multiple winners (multiple squirrels with the same age). The definite
+      determiner rules that out; all the $g \in G$ need to point $v$ to
+      \emph{the same} squirrel.
+  \end{itemize}
+  %
+  \vspace{4em}
+  \textbf{Absolute Superlative Reading}
+  %
+  \begin{itemize}
+    \item
+      When the inner DP is reset, it has the effect just demonstrated: the set
+      of outputs is restricted to those that map $v$ to the (unique) oldest
+      squirrel.
+    \item
+      The outer definite has no explicit maximization operator. For
+      simplicity, I assume that in such cases, it defaults to the basic plural
+      max operator introduced above. This will have no effect when the
+      predicates are all singular, but the uniqueness presupposition it brings
+      to bear is still forceful.
+    \item
+      Altogether, after the host DP has been reset, we will have an
+      essentially nondeterministic (continuized) individual with two
+      presuppositions: (1) there is exactly one squirrel with no elders; and (2)
+      there is exactly one circus that he is with.
+  \end{itemize}
+\end{minipage}
 
-Anna didn't give the only good talk
+\newpage
 
-\dotfill
+\begin{minipage}[t]{0.5\textwidth} % DP Superlative Derivs Cont'd
+\begin{align*} % Relative Superlative Deriv
+  &
+  \sv{\textrm{the circus with the oldest squirrel}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circus}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{with}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\M_v^\cn{ag}\,\p{\l y \dt \hole}}{y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{squirrel}}
+        }
+      }^{\dnar} } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circus}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{with}}
+      %
+      \FSL{%
+      %
+      \bitt{%
+        \l g \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }{y}
+      } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \textbf{the}_u\,\p{%
+        \l xg \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }
+    }{%
+      \cn{circ}\,x \land \cn{with}\,y\,x
+    }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \l g \dt
+        \uset{%
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \giv
+          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x
+        }
+    }{x}
+  }^{\reset} \\
+  %
+  %
+  &
+  \bitt{%
+    \l g \col |G_u| = |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x
+      }
+  }{x}
+\end{align*}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Relative Definite Comments
+  \textbf{Relative Reading} (cf.\ Haddock, Champollion and Saurland)
+
+  \begin{itemize}
+    \item
+      The only difference here is that we do not reset the inner DP, which
+      staves off its presupposition until more information is accumulated in
+      its scope
+    \item
+      But now when the outer DP is reset, it sets the presuppositions
+      of \emph{both} definites
+    \item
+      For any input $g$, $G =
+      \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
+        \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
+        onto a circle in some square that it maps to $v$.
+    \item
+      So requiring that there be exactly one such $v$ is tantamount to
+      requiring that there be exactly one square \emph{that has a circle in
+      it} and exactly one circle \emph{in that square}. In other words, there
+      should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
+      such that $\cn{in}\,y\,x$.
+  \end{itemize}
+\end{minipage}
 
 
-\begin{minipage}[t]{0.6\textwidth} %
+\dotbreak
+
+\begin{minipage}[t]{0.6\textwidth} % Adding Focus
 \begin{spreadlines}{0em}
 \begin{align*}
   % \M_u^f &=
@@ -565,14 +890,14 @@ Anna didn't give the only good talk
 \end{minipage}
 %
 %
-\begin{minipage}[t]{0.4\textwidth}
-This is some stuff
+\begin{minipage}[t]{0.4\textwidth} % Focus Notes
+Adding focus-sensitivity
 
 \end{minipage}
 
-\dotfill
+\dotbreak
 
-\begin{minipage}[t]{0.6\textwidth}
+\begin{minipage}[t]{0.6\textwidth} % Focus Derivs
 \begin{align*}
   \bitttt{\hole}{%
     \cn{j}^\F \star \p{\l j \dt \hole}
@@ -599,13 +924,13 @@ This is some stuff
 %
 %
 \begin{minipage}[t]{0.4\textwidth}
-stuff
+John drew the largest square
 \end{minipage}
 
-\newpage
+\dotbreak
 
+\begin{minipage}[t]{0.5\textwidth} % Focus-State Monad Fragment
 \begin{spreadlines}{0pt}
-\begin{minipage}[t]{0.6\textwidth}
 \begin{align*}
   \mathcal{F}\alpha
   &\coloneq
@@ -628,33 +953,67 @@ stuff
       \uset{\p{f\,x\,g'}_2 \giv \pair{x}{g'} \in \p{m\,g}_2}
     }
 \end{align*}
-\end{minipage}
 \end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Focus-State Monad Notes
+\begin{itemize}
+  \item
+    Rolling focus and state simultaneously to grease the wheels
+\end{itemize}
+\end{minipage}
 
-\dotfill
+\dotbreak
 
-\begin{minipage}[t]{0.6\textwidth}
+\begin{minipage}[t]{0.5\textwidth} % Only Fragment
+% \begin{spreadlines}{0pt}
 \begin{align*}
-  \textbf{the}
-  &\coloneq
-  \l \mathcal{M}ckg \col |G_u| = 1 \dt G_u,
-  \ \text{where} \ 
-  G = \mathcal{M}\,\uset{%
-    k\,y\,g'
-  \giv
-    \pair{\cn{T}}{g'} \in c\,y\,g^{u\mapsto y}
-  } \\
-  \textbf{only}
-  &\coloneq
-  \l G \col \cn{true}\,G \dt
-    \set{%
-      \pair{\cn{T}}{g} \in G
+  \cn{true} &\coloneq
+  \l G \dt \bigvee\set{\alpha \giv \pair{\alpha}{g} \in G} \\
+  %
+  \textbf{not} &\coloneq
+  \l mg \dt \eta\,\p{\neg \p{m\,g}}\,g \\
+  %
+  \textbf{only}_u &\coloneq 
+  \l G \col \cn{true}\,G \dt \M_u\,G \\
+  %
+  \textbf{the}_u &\coloneq
+  \l \mathcal{M}ckg \dt |G_u| = 1 \dt G, \\
+  &\hphantom{{}\coloneq{}}
+    \text{where}\ 
+    G = \mathcal{M}_u\uset{%
+      k\,x\,g'
     \giv
-      \neg\exists g' \dt \pair{\cn{T}}{g'} \in G \land g'\,u \sqsupset g\,u
+      \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
     }
 \end{align*}
+% \end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Only Fragment Notes
+\begin{spreadlines}{0pt}
+\begin{itemize}
+  \item
+    $\cn{true}$ and $\textbf{not}$ are bog standard dynamic booleans: an
+    update is ``true'' iff it generates at least one successful output
+  \item
+    Adjectival $\textbf{only}$ is just $\M$ plus a presupposition (cf.\
+    Coppock and Beaver 2012, 2014)!
+  \item
+    So here's the swim move: feed $\textbf{only}$ into $\textbf{the}$, and
+    then let the scope of the exclusivity ride the scope of the determiner.
+    This will predict relative readings for adj $\textbf{only}$.
+\end{itemize}
+\end{spreadlines}
 \end{minipage}
 
+\dotbreak
+
+John sold the only cars \\
+
+Anna didn't give the only good talk
 
 
 
