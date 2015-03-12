@@ -7,88 +7,123 @@
 \setlength{\mathindent}{0pt}
 \delimitershortfall=-1pt
 \setlist{leftmargin=*}
+\newcommand{\ctype}{\mathcal{C}}
+\newcommand{\one}{\textbf{1}}
+% \allsectionsfont{\normalsize\normalfont\scshape}
 
 \newcommand{\M}{\text{\sffamily\bfseries M}}
 \newcommand{\F}{\text{\sffamily\bfseries F}}
 
 \begin{document}
 
-\setlength\abovedisplayskip{0pt}
-\setlength\belowdisplayskip{0pt}
-\setlength\abovedisplayshortskip{0pt}
-\setlength\belowdisplayshortskip{0pt}
+\section{The Grammar}
 
-
-\begin{minipage}[t]{0.365\textwidth} % Cont Applicators
-\begin{spreadlines}{0pt}
+\vspace{-1em}\dotbreak[Scope]
+%
 \begin{align*}
-  m \fsl n
-  &\coloneq
-  \begin{cases}
-    m\,n
-    &\textbf{if}\ m \dblcolon \alpha\sto\beta,\ n \dblcolon \alpha \\
-    \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \fsl x}}}
-    &\textbf{otherwise}
-  \end{cases} \\
+m \fsl n
+\coloneq
+&\begin{cases}
+  m\,n \quad 
+  \textbf{if}\ m \dblcolon \alpha\sto\beta,\ n \dblcolon \alpha \\
+  \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \fsl x}}} \quad
+  \textbf{otherwise}
+\end{cases}
+%
+&
+m \bsl n
+&\coloneq
+\begin{cases}
+  n\,m \quad
+  \textbf{if}\ n \dblcolon \alpha\sto\beta,\ m \dblcolon \alpha \\
+  \l k \dt m\,\p{\l x \dt n\,\p{\l f \dt k\,\p{x \bsl f}}} \quad 
+  \textbf{otherwise}
+\end{cases}
+%
+&
+m \msl n
+&\coloneq
+\begin{cases}
+  \l x \dt m\,x \land n\,x \quad
+  \textbf{if}\ n \dblcolon \alpha\sto\beta,\ m \dblcolon \alpha \\
+  \l k \dt m\,\p{\l x \dt n\,\p{\l f \dt k\,\p{f \msl x}}} \quad 
+  \textbf{otherwise}
+\end{cases}
+\end{align*}
+
+\dotbreak[Binding]
+%
+\begin{align*}
+  \eta\,x &\coloneq
+  \l gh \dt \set{\tup{x,g,h}}
   %
-  m \bsl n
-  &\coloneq
+  &
+  m^\bind &\coloneq
+  \l kgh \dt \uset{k\,x\,g'\,h' \giv \tup{x,g',h'} \in m\,g}
+  %
+  &
+  m^\dnar &\coloneq
+  m\,\p{\l xgh \dt \set{\tup{x,g,h} \giv x \neq \cn{F}}}
+  %
+  &
+  x^\upar &\coloneq
+  \p{\eta\,x}^\bind = \l k \dt k\,x
+  %
+  &
+  m^{\rhd u} &\coloneq
+  m^\bind\,\p{\l xgh \dt \set{\tup{x,g^{u\mapsto x},h}}}
+\end{align*}
+
+\dotbreak[Postsuppositions]
+
+\begin{minisplit} % Postsuppositions
+\begin{align*}
+  m^\reset &\coloneq
+  \p{%
+    \l gh \dt
+    \set{%
+      \tup{x,g',h}
+    \giv
+      \tup{\cdot,\cdot,h'} \in G,\ \ \tup{x,g',\cdot} \in h'\,G
+    }
+  }^\bind, \quad \textrm{where}\ G = m^\dnar\,g\,h \\
+  %
+  \cn{true}_g &\coloneq
+  \l m \dt
+  \exists\tup{\cn{T},\cdot,h} \in G \dt
+  h\,G \neq \emptyset, \quad
+  \textrm{where}\ G = m\,g\,\cn{id} \\
+  %
+  \one_u &\equiv 
+  \l G \dt
   \begin{cases}
-    n\,m
-    &\textbf{if}\ n \dblcolon \alpha\sto\beta,\ m \dblcolon \alpha \\
-    \l k \dt m\,\p{\l x \dt n\,\p{\l f \dt k\,\p{x \bsl f}}}
-    &\textbf{otherwise}
+    G &\textbf{if}\ \ \abs{\set{g\,u \mid \tup{\cdot,g,\cdot} \in G}} = 1 \\
+    \emptyset &\textbf{otherwise}
   \end{cases}
 \end{align*}
-\end{spreadlines}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.35\textwidth}
-  \begin{itemize}[label={}]
+\begin{itemize}
   \item
-    The usual applicators for left and right continuized FA
+    Following Brasoveanu 2012, contexts have type $\ctype \equiv
+    \typepair{\gamma}{\varphi}$, where $\gamma$ is the type of assignment
+    functions, and $\varphi$ is the type of filters on sets of outputs:
+    $\{\typepair{\alpha}{\ctype}\}\sto\{\typepair{\alpha}{\ctype}\}$.
   \item
-    State.Set monad combinators for managing drefs
-  \item
-    A slightly tweaked lower operator to filter out falsity (more like
-    traditional standard dynamic semantics). This is not essential, but makes
-    the bookkeeping a little smoother.
+    The idea is that some lexical items impose global constraints on the
+    \emph{set} of outputs. To implement such things, we need a way of
+    accumulating such constraints throughout a computation, and delaying their
+    evaluation until the continuation is just right.
 \end{itemize}
-\end{minipage}
-%
-%
-\begin{minipage}[t]{0.285\textwidth} % State.Set Grammar
-\begin{spreadlines}{0pt}
-\begin{align*}
-  &&
-  \eta\,x &\coloneq
-  \l g \dt \set{\pair{x}{g}} \\
-  %
-  &&
-  m^{\bind} &\coloneq
-  \l kg \dt \uset{k\,x\,g' \giv \pair{x}{g'} \in m\,g} \\
-  %
-  &&
-  m^\dnar &\coloneq
-  m\,\p{\l xs \dt \set{\pair{x}{s} \giv x \neq \cn{F}}} \\
-  %
-  &&
-  x^\upar &\coloneq
-  \p{\eta\,x}^{\bind} = \l k \dt k\,x \\
-  %
-  &&
-  x^\reset &\coloneq
-  \p{x^\dnar}^{\bind}
-\end{align*}
-\end{spreadlines}
-\end{minipage}
+\end{minisplit}
 
+\dotbreak\vspace{-1em}
 
-\dotbreak
+\section{Basic Definite Descriptions}
 
-\begin{minipage}[t]{0.5\textwidth} % Basic Definite Fragment
-\begin{spreadlines}{0pt}
+\begin{minisplit} % Basic Definites
+\begin{spreadlines}{0pt} % Definite Fragment
 \begin{align*}
   \textbf{circle} &\coloneq
   \cn{circ} \\
@@ -100,18 +135,18 @@
   \cn{in} \\
   %
   \textbf{the}_u &\coloneq
-    \l ckg \col |G_u| = 1 \dt G, \\
-  &\hphantom{{}\coloneq \l ckg \col}
-    \text{where}\ 
-    G = \uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
+    \l ckgh \dt
+    \uset{%
+      k\,x\,g'\,h'
+    \giv
+    \tup{\cn{T},g',h'} \in c\,x\,g^{u\mapsto x}\,(h\circ\one_u)
+    } \\
 \end{align*}  
 \end{spreadlines}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % Basic Definite Fragment Notes
-\begin{spreadlines}{0pt}
-\begin{itemize}
+\begin{itemize} % Definite Notes
   \item
     $\textbf{the}_u$ is just $\textbf{a}_u$ plus a uniqueness presupposition.
     The presupposition restricts what the \emph{set} of outputs is allowed to
@@ -123,23 +158,27 @@
     postsupposition (Brasoveanu 2012, Henderson 2014), but here it is
     regulated by continuations, rather than logical subscripts (Charlow 2014)
 \end{itemize}
-\end{spreadlines}
-\end{minipage}
+\end{minisplit}
 
-\dotbreak
+\dotbreak[Reset]
 
-\begin{minipage}[t]{0.5\textwidth} % Basic Nested Definite Derivs
-\begin{align*} % Resetting a description
+\begin{minisplit} % Resets
+\begin{align*} % Reset Deriv
   \sv{\textrm{the square}}
   %
   &\leadsto
   \p{%
-    \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+    \btower{%
+      \textbf{the}_v\,\p{\l y \dt \hole},
+      y
+    }
     %
     \BSL{%
     %
-    \bitt{\hole}{\textbf{square}}
-    }
+    \btower{%
+      \hole,
+      \textbf{square}
+    }}
   }^{\dnar\,\reset}
   %
   \leadsto
@@ -150,17 +189,40 @@
   %
   &\leadsto
   \p{%
-    \bitt{\l g \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}}{y}
+    \btower{%
+      \l gh \dt \uset{\hole\,g^{v\mapsto y}\,h\circ\one_u \giv \cn{sq}\,y},
+      y
+    }
   }^\reset
   %
   \leadsto
-  \bitt{%
-    \l g \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
-  }{y}
+  \btower{%
+    \l gh \col \one_u^\mathsmaller{G} \dt
+    \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y},
+    y
+  }
 \end{align*}
 %
-\vspace{3em}
+\splitmini
 %
+\begin{itemize} % Reset Notes
+  \item
+    Note that resetting $\sv{\textrm{the square}}$ in the last reduction
+    step here has no effect on its semantic shape, because it's essentially
+    $\sv{\textrm{a square}}$.
+  \item
+    But it does fix the presupposition; For any input $g$, $G$ will be equal
+    to $\set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presup will
+    require all those $g$'s to map $v$ to the same square (which will only
+    be possible if there's exactly one square available to assign $v$ to
+    in the first place).
+\end{itemize} 
+\end{minisplit}
+
+\newpage
+\dotbreak[Absolute Definite Reading]
+
+\begin{minisplit} % Absolute Definites
 \begin{align*} % Absolute Definite Deriv
   &
   \sv{\textrm{the circle in the square}} \\
@@ -251,48 +313,30 @@
       }
   }{x}
 \end{align*}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % Absolute Definite Notes
-  \begin{itemize}
-    \item
-      Note that resetting $\sv{\textrm{the square}}$ in the last reduction
-      step here has no effect on its semantic shape, because it's essentially
-      $\sv{\textrm{a square}}$.
-    \item
-      But it does fix the presupposition; For any input $g$, $G$ will be equal
-      to $\set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presup will
-      require all those $g$'s to map $v$ to the same square (which will only
-      be possible if there's exactly one square available to assign $v$ to
-      in the first place).
-  \end{itemize} 
-  %
-  \vspace{2em}
-  %
-  \textbf{Absolute Reading}
-  %
-  \begin{itemize}
-    \item
-      The inner definite is reset, freezing its presupposition as above. When
-      the input assignment $g$ is eventually inserted, we will have $G =
-      \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presupposition
-      will guarantee that $g'\,v$ is constant across the outputs.
-    \item
-      As with the inner DP, the host DP's presupposition is fixed when it is
-      reset. This time, we have $G' = \set{\pair{x}{g^{\substack{u\mapsto x\\
-      v\mapsto y}}} \giv \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x}$, where
-      $g$ is whatever the input happens to be. In particular, all the outputs
-      will now need to agree on the value of $u$ in addition to $v$, which
-      will only be possible if there's exactly one circle in the square that
-      all outputs assign to $v$.
-  \end{itemize}
-\end{minipage}
+\begin{itemize} % Absolute Definite Notes
+  \item
+    The inner definite is reset, freezing its presupposition as above. When
+    the input assignment $g$ is eventually inserted, we will have $G =
+    \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presupposition
+    will guarantee that $g'\,v$ is constant across the outputs.
+  \item
+    As with the inner DP, the host DP's presupposition is fixed when it is
+    reset. This time, we have $G' = \set{\pair{x}{g^{\substack{u\mapsto x\\
+    v\mapsto y}}} \giv \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x}$, where
+    $g$ is whatever the input happens to be. In particular, all the outputs
+    will now need to agree on the value of $u$ in addition to $v$, which
+    will only be possible if there's exactly one circle in the square that
+    all outputs assign to $v$.
+\end{itemize}
+\end{minisplit}
 
-\newpage
+\dotbreak[Relative Definite (Haddock) Reading]
 
-\begin{minipage}[t]{0.5\textwidth} % Basic Definite Derivs Cont'd
-\begin{align*} % Relative Reading Deriv
+\begin{minisplit} % Haddock Definites
+\begin{align*} % Haddock Deriv
   &
   \sv{\textrm{the circle in the square}} \\
   %
@@ -382,38 +426,38 @@
       }
   }{x}
 \end{align*}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % Relative Definite Comments
-  \textbf{Relative Reading} (cf.\ Haddock, Champollion and Saurland)
+\begin{itemize} % Haddock Notes
+  \item
+    The only difference here is that we do not reset the inner DP, which
+    staves off its presupposition until more information is accumulated in
+    its scope
+  \item
+    But now when the outer DP is reset, it sets the presuppositions
+    of \emph{both} definites
+  \item
+    For any input $g$, $G =
+    \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
+      \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
+      onto a circle in some square that it maps to $v$.
+  \item
+    So requiring that there be exactly one such $v$ is tantamount to
+    requiring that there be exactly one square \emph{that has a circle in
+    it} and exactly one circle \emph{in that square}. In other words, there
+    should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
+    such that $\cn{in}\,y\,x$.
+\end{itemize}
+\end{minisplit}
 
-  \begin{itemize}
-    \item
-      The only difference here is that we do not reset the inner DP, which
-      staves off its presupposition until more information is accumulated in
-      its scope
-    \item
-      But now when the outer DP is reset, it sets the presuppositions
-      of \emph{both} definites
-    \item
-      For any input $g$, $G =
-      \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
-        \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
-        onto a circle in some square that it maps to $v$.
-    \item
-      So requiring that there be exactly one such $v$ is tantamount to
-      requiring that there be exactly one square \emph{that has a circle in
-      it} and exactly one circle \emph{in that square}. In other words, there
-      should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
-      such that $\cn{in}\,y\,x$.
-  \end{itemize}
-\end{minipage}
+\newpage
+\dotbreak\vspace{-1em}
 
-\dotbreak
+\section{Plurals}
 
-\begin{minipage}[t]{0.5\textwidth} % Plural Fragment
-\begin{spreadlines}{0pt}
+\begin{minisplit} % Plurals
+\begin{spreadlines}{0pt} % Plural Fragment
 \begin{align*}
   \M_u &\coloneq
   \l G \dt
@@ -433,12 +477,10 @@
   \l Px \dt x \in \set{\mathlarger{\oplus} P' \giv P' \subseteq P}
 \end{align*}  
 \end{spreadlines}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % Plural Fragment Notes
-\begin{spreadlines}{0pt}
-  \begin{itemize}
+  \begin{itemize} % Plural Notes
     \item
       $\textbf{-s}$ is a boilerplate plural morpheme that builds sums from the
       atoms in its complement.
@@ -449,20 +491,18 @@
       that is a proper part of something assigned to $u$ by some other $g' \in
       G$.
   \end{itemize}
-\end{spreadlines}
-\end{minipage}
+\end{minisplit}
 
-\dotbreak
+\dotbreak[Derivations]
 
-Derivations \dots
+circles, squares, etc. \dots
 
+\dotbreak\vspace{-1em}
 
-\newpage
+\section{DP-Internal Superlatives}
 
-\dotbreak
-
-\begin{minipage}[t]{0.5\textwidth} % DP Superlative Fragment
-\begin{spreadlines}{0pt}
+\begin{minisplit} % DP Superlatives
+\begin{spreadlines}{0pt} % DP Sup Fragment
 \begin{align*}
   \M_u^f &\coloneq
   \l G \dt
@@ -497,11 +537,10 @@ Derivations \dots
     }
 \end{align*}
 \end{spreadlines}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % DP Superlative Notes
-\begin{itemize}
+\begin{itemize} % DP Sup Notes
   \item
     $\textbf{est}$ abstracts over the ordering function that $\M$ uses to
     compare individuals. In the case of pluralities, $\M_u$ filters away any
@@ -515,12 +554,12 @@ Derivations \dots
     superlatives; ``Haddock'' definites become relative superlatives. This
     part is my favorite.
 \end{itemize}
-\end{minipage}
+\end{minisplit}
 
-\dotbreak
+\dotbreak[Superlative Reset]
 
-\begin{minipage}[t]{0.5\textwidth} % DP Superlative Derivs
-\begin{align*} % Resetting a superlative
+\begin{minisplit} % DP Superlative Reset
+\begin{align*} % DP Sup Reset Deriv
   &
   \sv{\textrm{the oldest squirrel}} \\
   %
@@ -559,9 +598,28 @@ Derivations \dots
   }{y}
 \end{align*}
 %
-\vspace{3em}
+\splitmini
 %
-\begin{align*} % Absolute Superlative Deriv
+\begin{itemize} % DP Sup Reset Notes
+  \item
+    Resetting the superlative DP has two effects: (1) it fixes the set of
+    individuals that the superlative operator $\M$ compares, in this case
+    squirrels with respect to age; and (2) it freezes the presupposition
+    associated with the definite article.
+  \item
+    Here $G = \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y,\ \forall
+    z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y}$. This set could in principle
+    have multiple winners (multiple squirrels with the same age). The definite
+    determiner rules that out; all the $g \in G$ need to point $v$ to
+    \emph{the same} squirrel.
+\end{itemize}
+\end{minisplit}
+
+\newpage
+\dotbreak[Absolute DP-Internal Superlatives]
+
+\begin{minisplit} % DP Superlatives, Absolute
+\begin{align*} % Absolute DP Sup Deriv
   &
   \sv{\textrm{the circus with the oldest squirrel}} \\
   %
@@ -670,50 +728,32 @@ Derivations \dots
       }
   }{x}
 \end{align*}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % DP Superlative Notes
-  \begin{itemize}
-    \item
-      Resetting the superlative DP has two effects: (1) it fixes the set of
-      individuals that the superlative operator $\M$ compares, in this case
-      squirrels with respect to age; and (2) it freezes the presupposition
-      associated with the definite article.
-    \item
-      Here $G = \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y,\ \forall
-      z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y}$. This set could in principle
-      have multiple winners (multiple squirrels with the same age). The definite
-      determiner rules that out; all the $g \in G$ need to point $v$ to
-      \emph{the same} squirrel.
-  \end{itemize}
-  %
-  \vspace{4em}
-  \textbf{Absolute Superlative Reading}
-  %
-  \begin{itemize}
-    \item
-      When the inner DP is reset, it has the effect just demonstrated: the set
-      of outputs is restricted to those that map $v$ to the (unique) oldest
-      squirrel.
-    \item
-      The outer definite has no explicit maximization operator. For
-      simplicity, I assume that in such cases, it defaults to the basic plural
-      max operator introduced above. This will have no effect when the
-      predicates are all singular, but the uniqueness presupposition it brings
-      to bear is still forceful.
-    \item
-      Altogether, after the host DP has been reset, we will have an
-      essentially nondeterministic (continuized) individual with two
-      presuppositions: (1) there is exactly one squirrel with no elders; and (2)
-      there is exactly one circus that he is with.
-  \end{itemize}
-\end{minipage}
+\begin{itemize} % Absolute DP Sup Notes
+  \item
+    When the inner DP is reset, it has the effect just demonstrated: the set
+    of outputs is restricted to those that map $v$ to the (unique) oldest
+    squirrel.
+  \item
+    The outer definite has no explicit maximization operator. For
+    simplicity, I assume that in such cases, it defaults to the basic plural
+    max operator introduced above. This will have no effect when the
+    predicates are all singular, but the uniqueness presupposition it brings
+    to bear is still forceful.
+  \item
+    Altogether, after the host DP has been reset, we will have an
+    essentially nondeterministic (continuized) individual with two
+    presuppositions: (1) there is exactly one squirrel with no elders; and (2)
+    there is exactly one circus that he is with.
+\end{itemize}
+\end{minisplit}
 
-\newpage
+\dotbreak[Relative DP-Internal Superlatives]
 
-\begin{minipage}[t]{0.5\textwidth} % DP Superlative Derivs Cont'd
-\begin{align*} % Relative Superlative Deriv
+\begin{minisplit} % DP Superlative, Relative
+\begin{align*} % Relative DP Sup Deriv
   &
   \sv{\textrm{the circus with the oldest squirrel}} \\
   %
@@ -803,36 +843,35 @@ Derivations \dots
       }
   }{x}
 \end{align*}
-\end{minipage}
 %
+\splitmini
 %
-\begin{minipage}[t]{0.5\textwidth} % Relative Definite Comments
-  \textbf{Relative Reading} (cf.\ Haddock, Champollion and Saurland)
+\begin{itemize} % Rel DP Sup Notes
+  \item
+    The only difference here is that we do not reset the inner DP, which
+    staves off its presupposition until more information is accumulated in
+    its scope
+  \item
+    But now when the outer DP is reset, it sets the presuppositions
+    of \emph{both} definites
+  \item
+    For any input $g$, $G =
+    \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
+      \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
+      onto a circle in some square that it maps to $v$.
+  \item
+    So requiring that there be exactly one such $v$ is tantamount to
+    requiring that there be exactly one square \emph{that has a circle in
+    it} and exactly one circle \emph{in that square}. In other words, there
+    should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
+    such that $\cn{in}\,y\,x$.
+\end{itemize}
+\end{minisplit}
 
-  \begin{itemize}
-    \item
-      The only difference here is that we do not reset the inner DP, which
-      staves off its presupposition until more information is accumulated in
-      its scope
-    \item
-      But now when the outer DP is reset, it sets the presuppositions
-      of \emph{both} definites
-    \item
-      For any input $g$, $G =
-      \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
-        \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
-        onto a circle in some square that it maps to $v$.
-    \item
-      So requiring that there be exactly one such $v$ is tantamount to
-      requiring that there be exactly one square \emph{that has a circle in
-      it} and exactly one circle \emph{in that square}. In other words, there
-      should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
-      such that $\cn{in}\,y\,x$.
-  \end{itemize}
-\end{minipage}
+\newpage
+\dotbreak\vspace{-1em}
 
-
-\dotbreak
+\section{Focus}
 
 \begin{minipage}[t]{0.6\textwidth} % Adding Focus
 \begin{spreadlines}{0em}
@@ -895,7 +934,7 @@ Adding focus-sensitivity
 
 \end{minipage}
 
-\dotbreak
+\dotbreak[Derivations]
 
 \begin{minipage}[t]{0.6\textwidth} % Focus Derivs
 \begin{align*}
@@ -964,7 +1003,9 @@ John drew the largest square
 \end{itemize}
 \end{minipage}
 
-\dotbreak
+\dotbreak\vspace{-1em}
+
+\section{Adjectival Exclusives}
 
 \begin{minipage}[t]{0.5\textwidth} % Only Fragment
 % \begin{spreadlines}{0pt}
@@ -1014,6 +1055,7 @@ John drew the largest square
 John sold the only cars \\
 
 Anna didn't give the only good talk
+
 
 
 

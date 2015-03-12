@@ -38,11 +38,29 @@
   #1
 }
 \newcommand{\uset}[1]{\USET*{#1}}
-% pairs: \pair{..}{..} = <.., ..>
-\DeclarePairedDelimiterX\PAIR[1]\langle\rangle{#1}
-\newcommand{\pair}[2]{\PAIR*{#1,\pt #2}}
-\newcommand{\thickpair}[2]{\PAIR*{#1,\ \ #2}}
+% tuples
+\DeclarePairedDelimiterX\TUP[1]\langle\rangle{#1}
+% tuple of arbitrary length
+\makeatletter
+\newcommand{\tup}[1]{%
+  \ensuremath{%
+    \TUP*{\my@tups #1,\relax\noexpand\@eolst}%
+  }%
+}
+\def\my@tups #1,#2\@eolst{%
+  \ifx\relax#2\relax
+    #1%
+  \else
+    #1,\pt \my@tups #2\@eolst%
+  \fi
+}
+\makeatother
+\newcommand{\pair}[2]{\tup{#1, #2}}
+\newcommand{\thickpair}[2]{\TUP*{#1,\ \ #2}}
 \newcommand{\typepair}[2]{#1 \ast #2}
+% verts
+\DeclarePairedDelimiterX\ABS[1]||{#1}
+\newcommand{\abs}[1]{\ABS*{#1}}
 
 %%%%% examples, lists, footnotes, citations %%%%%
 \usepackage[bottom,multiple]{footmisc} % force footnotes to bottom of page
@@ -170,9 +188,24 @@
 }
 % dots to break sections in handouts, etc
 \newcommand{\dotbreak}[1][]{%
-  \ifthenelse{\equal{#1}{}}{% no opt arg
+  % \vspace{0.5em}\dotfill\hspace{0.5\textwidth} \\ \textsc{#1}\vspace{0.5em}
+  \ifthenelse{\equal{#1}{}}{%
     \vspace{0.5em}\dotfill\vspace{0.5em}
-  }{\vspace{#1}\dotfill\vspace{#1}}
+  }{%
+    \vspace{0.5em}\dotfill\hspace{0.5\textwidth} \\ \textsc{#1}\vspace{0.5em}
+  }
+}
+% two-column minipage, with widths controlled by optional param
+\newenvironment{minisplit}[1][0.5]{%
+  \newcommand{\splitmini}{%
+    \end{minipage}%
+    \begin{minipage}[t]{\dimexpr\textwidth-#1\textwidth\relax}%
+  }
+  \noindent\ignorespaces%
+  \begin{minipage}[t]{#1\textwidth}%
+}{%
+  \end{minipage}%
+  \ignorespacesafterend%
 }
 
 %%% judgment diacritics
@@ -192,67 +225,41 @@
 \newcommand{\upar}{\uparrow}
 \newcommand{\reset}{\downupharpoons}
 \newcommand{\hole}{[\,]}
-\newcommand{\fsl}{\,/\,}
-\newcommand{\bsl}{\,\backslash\,}
-\newcommand{\msl}{\,|\,}
+\newcommand{\fsl}{\sslash}
+\newcommand{\bsl}{\bbslash}
+\newcommand{\msl}{\,\|\,}
 \newcommand{\FSL}[1]{\ \stretchrel[600]{/\ }{#1}}
 \newcommand{\BSL}[1]{\ \stretchrel[600]{\backslash\ }{#1}}
 \newcommand{\MSL}[1]{\ \stretchrel[600]{|\ }{#1}}
 
-% bipartite 2-story tower
-\newcommand{\bitt}[2]{%
-  \ensuremath{%
-    \mathinner{%
-      \begin{tabular}[c]{@{}c@{}}
-        {\ensuremath{#1}}\\
-        \hline
-        {\ensuremath{#2}}\\
-      \end{tabular}
-    }
-  }
-}
-% bipartite 3-story tower
-\newcommand{\bittt}[3]{%
-  \ensuremath{%
-    \mathinner{%
-      \begin{tabular}[c]{@{}c@{}}
-        {\ensuremath{#1}}\\
-        \hline
-        {\ensuremath{#2}}\\
-        \hline
-        {\ensuremath{#3}}\\
-      \end{tabular}
-    }
-  }
-}
-% bipartite 4-story tower
-\newcommand{\bitttt}[4]{%
-  \ensuremath{%
-    \mathinner{%
-      \begin{tabular}[c]{@{}c@{}}
-        {\ensuremath{#1}}\\
-        \hline
-        {\ensuremath{#2}}\\
-        \hline
-        {\ensuremath{#3}}\\
-        \hline
-        {\ensuremath{#4}}\\
-      \end{tabular}
-    }
-  }
-}
 % tripartite 2-story tower
 \newcommand{\tritt}[3]{%
-  \ensuremath{%
-    \mathinner{
+  \ensuremath{\mathinner{%
       \begin{tabular}[c]{@{ }c@{ }}
         \strut\ensuremath{#1}\ \hfil\vrule\hfil\ \ensuremath{#2}\\
         \hline
         \strut\ensuremath{#3}\\
       \end{tabular}
-    }
-  }
+  }}
 }
+% bipartite tower of arbitrary depth
+\makeatletter
+\newcommand{\btower}[1]{%
+  \ensuremath{\mathinner{%
+      \begin{tabular}[c]{@{}c@{}}%
+        \my@tows #1,\relax\noexpand\@eolst%
+      \end{tabular}%
+  }}%
+}
+\def\my@tows #1,#2\@eolst{%
+  \ifx\relax#2\relax
+    {\ensuremath{#1}}%
+  \else
+    {\ensuremath{#1}}\\\hline%
+    \my@tows #2\@eolst%
+  \fi
+}
+\makeatother
 
 
 %%%%% drawing %%%%%
