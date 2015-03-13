@@ -236,6 +236,41 @@
 \newcommand{\BSL}[1]{\ \stretchrel[600]{\backslash\ }{#1}}
 \newcommand{\MSL}[1]{\ \stretchrel[600]{|\ }{#1}}
 
+\makeatletter
+\newcommand{\tower}[2][\my@btows]{%
+  \ensuremath{\mathinner{%
+      \begin{tabular}[c]{@{}c@{}}%
+        #1 #2,\relax\noexpand\@eolst%
+      \end{tabular}%
+  }}%
+}
+\def\my@ttows #1,#2,#3\@eolst{%
+  \ifx\relax#3\relax
+    \strut\ensuremath{#1}\\
+  \else
+    \strut\ensuremath{#1}\ \hfil\vrule\hfil\ \ensuremath{#2}\\
+    \hline
+    \my@ttows #3\@eolst%
+  \fi
+}
+\def\my@btows #1,#2\@eolst{%
+  \ifx\relax#2\relax
+    \ensuremath{#1}%
+  \else
+    \ensuremath{#1}\\\hline%
+    \my@btows #2\@eolst%
+  \fi
+}
+% tripartite tower of aribitrary depth
+\newcommand{\ttower}[1]{\tower[\my@ttows]{#1}}
+% bipartite tower of arbitrary depth
+\newcommand{\btower}[1]{\tower{#1}}
+\makeatother
+
+\newcommand{\bitt}[2]{\btower{#1, #2}}
+\newcommand{\bittt}[3]{\btower{#1, #2, #3}}
+\newcommand{\bitttt}[4]{\btower{#1, #2, #3, #4}}
+
 % tripartite 2-story tower
 \newcommand{\tritt}[3]{%
   \ensuremath{\mathinner{%
@@ -246,27 +281,6 @@
       \end{tabular}
   }}
 }
-% bipartite tower of arbitrary depth
-\makeatletter
-\newcommand{\btower}[1]{%
-  \ensuremath{\mathinner{%
-      \begin{tabular}[c]{@{}c@{}}%
-        \my@tows #1,\relax\noexpand\@eolst%
-      \end{tabular}%
-  }}%
-}
-\def\my@tows #1,#2\@eolst{%
-  \ifx\relax#2\relax
-    {\ensuremath{#1}}%
-  \else
-    {\ensuremath{#1}}\\\hline%
-    \my@tows #2\@eolst%
-  \fi
-}
-\makeatother
-\newcommand{\bitt}[2]{\btower{#1, #2}}
-\newcommand{\bittt}[3]{\btower{#1, #2, #3}}
-\newcommand{\bitttt}[4]{\btower{#1, #2, #3, #4}}
 
 
 %%%%% drawing %%%%%

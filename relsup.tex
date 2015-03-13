@@ -87,7 +87,7 @@ m \msl n
     \giv
       \tup{\cdot,\cdot,h'} \in G,\ \ \tup{x,g',\cdot} \in h'\,G
     }
-  }^\bind, \quad \textrm{where}\ G = m^\dnar\,g\,h \\
+  }^\bind, \quad \textrm{where}\ G = m^\dnar\,g\,\cn{id} \\
   %
   \cn{true}_g\,m &\coloneq
   \exists\tup{\cdot,\cdot,h} \in G \dt
@@ -100,11 +100,10 @@ m \msl n
 \begin{itemize}
   \item
     Postsups are evaluated at reset boundaries and at closing time. A
-    computation is $\cn{true}$ at an input $g$ if one of it has a successful
-    output, \emph{even after its postsups have applied}. A computation is
-    reset once its postsuppositions have each had a whack at the set of
-    outputs. The survivors are collected, the postsuppositions dispensed, and
-    the results lifted back up into the semantic stream.
+    computation is $\cn{true}$ at an input $g$ if it has a successful output
+    \emph{after its postsups have applied}. A computation is not fully reset
+    until its postsuppositions have each had a whack at the set of outputs, at
+    which point the survivors are collected, and the postsups flushed.
 \end{itemize}
 }
 %
@@ -234,7 +233,6 @@ m \msl n
 \end{itemize} 
 \end{minisplit}
 
-\newpage
 \dotbreak[Absolute Definite Reading]
 
 \begin{minisplit} % Absolute Definites
@@ -245,25 +243,25 @@ m \msl n
   %
   &
   \p{%
-    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    \btower{\textbf{the}_u\,\p{\l x \dt \hole}, x}
     %
     \BSL{%
     %
     \p{%
-      \bitt{\hole}{\textbf{circle}}
+      \btower{\hole, \textbf{circle}}
       %
       \MSL{%
       %
-      \bitt{\hole}{\textbf{in}}
+      \btower{\hole, \textbf{in}}
       %
       \FSL{%
       %
       \p{%
-        \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+        \btower{\textbf{the}_v\,\p{\l y \dt \hole}, y}
         %
         \BSL{%
         %
-        \bitt{\hole}{\textbf{square}}
+        \btower{\hole, \textbf{square}}
         }
       }^{\dnar\,\reset} } }
     } }
@@ -272,34 +270,35 @@ m \msl n
   %
   &
   \p{%
-    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    \btower{\textbf{the}_u\,\p{\l x \dt \hole}, x}
     %
     \BSL{%
     %
     \p{%
-      \bitt{\hole}{\textbf{circle}}
+      \btower{\hole, \textbf{circle}}
       %
       \MSL{%
       %
-      \bitt{\hole}{\textbf{in}}
+      \btower{\hole, \textbf{in}}
       %
       \FSL{%
       %
-      \bitt{%
-        \l g \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
-      }{y}
-      } }
+      \btower{%
+        \l gh \col \one_v^\ms{G} \dt
+        \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y},
+        y
+      } } }
     } }
   }^{\dnar\,\reset} \\
   %
   %
   &
   \p{%
-    \bitt{%
+    \btower{%
       \textbf{the}_u\,\p{%
-        \l xg \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
-      }
-    }{%
+        \l xgh \col \one_v^\ms{G} \dt
+        \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y}
+      },
       \cn{circ}\,x \land \cn{in}\,y\,x
     }
   }^{\dnar\,\reset} \\
@@ -307,26 +306,28 @@ m \msl n
   %
   &
   \p{%
-    \bitt{%
-      \l g \col |G_v| = 1 \dt
-        \uset{%
-          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
-        \giv
-          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
-        }
-    }{x}
+    \btower{%
+      \l gh \col \one_v^\ms{G} \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,\post{h}{\one_u}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+      },
+      x
+    }
   }^\reset \\
   %
   %
   &
-  \bitt{%
-    \l g \col |G'_u| = |G_v| = 1 \dt
-      \uset{%
-        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
-      \giv
-        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
-      }
-  }{x}
+  \btower{%
+    \l gh \col \one_v^\ms{G} \land \one_u^\ms{G'} \dt
+    \uset{%
+      \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
+    \giv
+      \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+    },
+    x
+  }
 \end{align*}
 %
 \splitmini
@@ -335,16 +336,16 @@ m \msl n
   \item
     The inner definite is reset, freezing its presupposition as above. When
     the input assignment $g$ is eventually inserted, we will have $G =
-    \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presupposition
-    will guarantee that $g'\,v$ is constant across the outputs.
+    \set{\tup{y, g^{v\mapsto y}, \one_v} \giv \cn{sq}\,y}$, and the
+    presupposition will guarantee that $g'\,v$ is constant across the outputs.
   \item
     As with the inner DP, the host DP's presupposition is fixed when it is
-    reset. This time, we have $G' = \set{\pair{x}{g^{\substack{u\mapsto x\\
-    v\mapsto y}}} \giv \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x}$, where
-    $g$ is whatever the input happens to be. In particular, all the outputs
-    will now need to agree on the value of $u$ in addition to $v$, which
-    will only be possible if there's exactly one circle in the square that
-    all outputs assign to $v$.
+    reset. This time, we have $G' = \set{\tup{x, g^{\substack{u\mapsto x\\
+    v\mapsto y}}, \one_u} \giv \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x}$,
+    where $g$ is whatever the input happens to be. In particular, all the
+    outputs will now need to agree on the value of $u$ in addition to $v$,
+    which will only be possible if there's exactly one circle in the square
+    that all outputs assign to $v$.
 \end{itemize}
 \end{minisplit}
 
@@ -385,34 +386,34 @@ m \msl n
   %
   &
   \p{%
-    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    \btower{\textbf{the}_u\,\p{\l x \dt \hole}, x}
     %
     \BSL{%
     %
     \p{%
-      \bitt{\hole}{\textbf{circle}}
+      \btower{\hole, \textbf{circle}}
       %
       \MSL{%
       %
-      \bitt{\hole}{\textbf{in}}
+      \btower{\hole, \textbf{in}}
       %
       \FSL{%
       %
-      \bitt{%
-        \l g \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
-      }{y}
-      } }
+      \btower{%
+        \l gh \dt \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y},
+        y
+      } } }
     } }
   }^{\dnar\,\reset} \\
   %
   %
   &
   \p{%
-    \bitt{%
+    \btower{%
       \textbf{the}_u\,\p{%
-        \l xg \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
-      }
-    }{%
+        \l xgh \dt
+        \uset{\hole\,g^{v\mapsto y}\,\post{h}{\one_v} \giv \cn{sq}\,y}
+      },
       \cn{circ}\,x \land \cn{in}\,y\,x
     }
   }^{\dnar\,\reset} \\
@@ -420,25 +421,28 @@ m \msl n
   %
   &
   \p{%
-    \bitt{%
-      \l g \dt
-        \uset{%
-          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
-        \giv
-          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
-        }
-    }{x}
+    \btower{%
+      \l gh \dt
+      \uset{%
+        \hole\,
+        g^{\substack{u\mapsto x\\ v\mapsto y}}\,
+        \post{\p{\post{h}{\one_u}}}{\one_v}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+      },
+      x
+    }
   }^{\reset} \\
   %
   %
   &
-  \bitt{%
-    \l g \col |G_u| = |G_v| = 1 \dt
-      \uset{%
-        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
-      \giv
-        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
-      }
+  \btower{%
+    \l gh \col \one_u^\ms{G} \land \one_v^\ms{G} \dt
+    \uset{%
+      \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
+    \giv
+      \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+    }
   }{x}
 \end{align*}
 %
@@ -447,22 +451,26 @@ m \msl n
 \begin{itemize} % Haddock Notes
   \item
     The only difference here is that we do not reset the inner DP, which
-    staves off its presupposition until more information is accumulated in
-    its scope
+    staves off its postsup until more information is accumulated in its scope.
   \item
-    But now when the outer DP is reset, it sets the presuppositions
-    of \emph{both} definites
+    So when the outer DP is eventually reset, it ends up fixing the postsup of
+    both definites to the same set of potential outputs.
   \item
-    For any input $g$, $G =
-    \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
-      \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
-      onto a circle in some square that it maps to $v$.
+    For any input $g$, the set of outputs that $\one_u$ and $\one_v$ will
+    target is
+    $\set{%
+      \tup{x, g^{\substack{u\mapsto x\\ v\mapsto y}}, \post{\one_u}{\one_v}}
+    \giv
+      \cn{sq}\,x,\ \cn{circ}\,y,\ \cn{in}\,y\,x
+    }$.
+    All of the outputs in this set will map $u$ to some circle and $v$ to some
+    square containing the circle they map to $u$.
   \item
-    So requiring that there be exactly one such $v$ is tantamount to
-    requiring that there be exactly one square \emph{that has a circle in
-    it} and exactly one circle \emph{in that square}. In other words, there
-    should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
-    such that $\cn{in}\,y\,x$.
+    Requiring that there be exactly one such $v$ and one such $u$ is
+    tantamount to requiring that there be exactly one square \emph{that has a
+    circle in it} and exactly one circle \emph{in that square}. In other
+    words, there should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times
+    \cn{sq}$ such that $\cn{in}\,y\,x$.
 \end{itemize}
 \end{minisplit}
 
@@ -581,11 +589,11 @@ circles, squares, etc. \dots
   %
   &\leadsto
   \p{%
-    \bitt{\textbf{the}_v\,\M_v^\cn{ag}\,\p{\l y \dt \hole}}{y}
+    \btower{\textbf{the}_v\,\M_v^\cn{ag}\,\p{\l y \dt \hole}, y}
     %
     \BSL{%
     %
-    \bitt{\hole}{\textbf{squirrel}}
+    \btower{\hole, \textbf{squirrel}}
     }
   }^{\dnar\,\reset}
   %
@@ -597,12 +605,20 @@ circles, squares, etc. \dots
   %
   &\leadsto
   \p{%
-    \bitt{\l g \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}}{y}
+    \btower{\l g \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}, y}
   }^\reset
   %
   \leadsto
-  \bitt{%
+  \btower{%
     \l g \col |G_v| = 1 \dt
+    \uset{%
+      \hole\,g^{v\mapsto y}
+    \giv
+      \begin{array}{L}
+        \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
+      \end{array}
+    },
+    y\vphantom{%
       \uset{%
         \hole\,g^{v\mapsto y}
       \giv
@@ -610,7 +626,8 @@ circles, squares, etc. \dots
           \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
         \end{array}
       }
-  }{y}
+    }
+  }
 \end{align*}
 %
 \splitmini
@@ -974,6 +991,18 @@ Adding focus-sensitivity
   }{\hole}{\hole}{y}
 }
 \end{align*}  
+\begin{align*}
+  \ttower{%
+    A, A,
+    S, S,
+    \l x \dt x,
+  } \\
+  %
+  \btower{%
+    \textbf{the}_v\,\p{\l y \dt \hole},
+    y
+  }
+\end{align*}
 \end{minipage}
 %
 %
