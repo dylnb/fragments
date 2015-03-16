@@ -5,7 +5,7 @@
 \geometry{landscape, margin=0.5in}
 \setlength{\parindent}{0pt}
 \setlength{\mathindent}{0pt}
-\delimitershortfall=-1pt
+% \delimitershortfall=-1pt
 \setlist{leftmargin=*}
 \newcommand{\ctype}{\mathcal{C}}
 \newcommand{\one}{\textbf{1}}
@@ -14,6 +14,7 @@
 
 \newcommand{\M}{\text{\sffamily\bfseries M}}
 \newcommand{\F}{\text{\sffamily\bfseries F}}
+\newcommand{\T}{\text{\sffamily\bfseries T}}
 
 \begin{document}
 
@@ -209,7 +210,7 @@ m \msl n
   %
   \leadsto
   \btower{%
-    \l gh \col \one_u^\ms{G} \dt
+    \l gh \col \abs{G_v} = 1 \dt
     \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y},
     y
   }
@@ -284,7 +285,7 @@ m \msl n
       \FSL{%
       %
       \btower{%
-        \l gh \col \one_v^\ms{G} \dt
+        \l gh \col \abs{G_v} = 1 \dt
         \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y},
         y
       } } }
@@ -296,7 +297,7 @@ m \msl n
   \p{%
     \btower{%
       \textbf{the}_u\,\p{%
-        \l xgh \col \one_v^\ms{G} \dt
+        \l xgh \col \abs{G_v} = 1 \dt
         \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y}
       },
       \cn{circ}\,x \land \cn{in}\,y\,x
@@ -307,7 +308,7 @@ m \msl n
   &
   \p{%
     \btower{%
-      \l gh \col \one_v^\ms{G} \dt
+      \l gh \col \abs{G_v} = 1 \dt
       \uset{%
         \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,\post{h}{\one_u}
       \giv
@@ -320,7 +321,7 @@ m \msl n
   %
   &
   \btower{%
-    \l gh \col \one_v^\ms{G} \land \one_u^\ms{G'} \dt
+    \l gh \col \abs{G_v} = \abs{G'_u} = 1 \dt
     \uset{%
       \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
     \giv
@@ -400,8 +401,9 @@ m \msl n
       \FSL{%
       %
       \btower{%
-        \l gh \dt \uset{\hole\,g^{v\mapsto y}\,h \giv \cn{sq}\,y},
-        y
+        \l gh \dt
+        \uset{\hole\,g^{v\mapsto y}\,\post{h}{\one_v} \giv \cn{sq}\,y}
+      , y
       } } }
     } }
   }^{\dnar\,\reset} \\
@@ -437,7 +439,7 @@ m \msl n
   %
   &
   \btower{%
-    \l gh \col \one_u^\ms{G} \land \one_v^\ms{G} \dt
+    \l gh \col \abs{G_v} = \abs{G_u} = 1 \dt
     \uset{%
       \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
     \giv
@@ -456,15 +458,14 @@ m \msl n
     So when the outer DP is eventually reset, it ends up fixing the postsup of
     both definites to the same set of potential outputs.
   \item
-    For any input $g$, the set of outputs that $\one_u$ and $\one_v$ will
-    target is
-    $\set{%
+    For any input $g$, the set of outputs $G$ that $\one_u$ and $\one_v$ will
+    target is given below. All of the outputs in this set will map $u$ to some
+    circle and $v$ to some square containing the circle they map to $u$.\\
+    $G = \set{%
       \tup{x, g^{\substack{u\mapsto x\\ v\mapsto y}}, \post{\one_u}{\one_v}}
     \giv
       \cn{sq}\,x,\ \cn{circ}\,y,\ \cn{in}\,y\,x
     }$.
-    All of the outputs in this set will map $u$ to some circle and $v$ to some
-    square containing the circle they map to $u$.
   \item
     Requiring that there be exactly one such $v$ and one such $u$ is
     tantamount to requiring that there be exactly one square \emph{that has a
@@ -482,22 +483,24 @@ m \msl n
 \begin{minisplit} % Plurals
 \begin{spreadlines}{0pt} % Plural Fragment
 \begin{align*}
+  \textbf{-s} &\coloneq
+  \l Px \dt x \in \set{\mathlarger{\oplus} P' \giv P' \subseteq P} \\
+  %
+  \textbf{the}_u &\coloneq
+  \l ckgh \col \dt
+  \uset{%
+    k\,x\,g' h'
+  \giv
+    \tup{\T,g',h'} \in c\,x\,g^{u\mapsto x}\,\post{h}{\one_u\circ\M_u}
+  } \\
+  %
   \M_u &\coloneq
   \l G \dt
     \set{%
-      \pair{\cdot}{g} \in G
+      \tup{\cdot, g, \cdot} \in G
     \giv
-      \neg\exists\pair{\cdot}{g'} \in G \dt g'\,u \sqsupset g\,u
-    } \\
-  %
-  \textbf{the}_u &\coloneq
-    \l ckg \col |G_u| = 1 \dt G, \\
-  &\hphantom{{}\coloneq{}}
-    \text{where}\ 
-    G = \M_u\uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
-  %
-  \textbf{-s} &\coloneq
-  \l Px \dt x \in \set{\mathlarger{\oplus} P' \giv P' \subseteq P}
+      \neg\exists\tup{\cdot,g',\cdot} \in G \dt g'\,u \sqsupset g\,u
+    }
 \end{align*}  
 \end{spreadlines}
 %
@@ -527,16 +530,16 @@ circles, squares, etc. \dots
 \begin{minisplit} % DP Superlatives
 \begin{spreadlines}{0pt} % DP Sup Fragment
 \begin{align*}
+  \textbf{older} &\coloneq
+  \l xy \dt \cn{age}\,x > \cn{age}\,y \\
+  %
   \M_u^f &\coloneq
   \l G \dt
-    \set{%
-      \pair{\cdot}{g} \in G
-    \giv
-      \neg\exists\pair{\cdot}{g'} \in G \dt f\,(g'\,u)\,(g\,u)
-    } \\
-  %
-  \textbf{older} &\coloneq
-    \l xy \dt \cn{age}\,x > \cn{age}y \\
+  \set{%
+    \tup{\cdot,g,\cdot} \in G
+  \giv
+    \neg\exists\tup{\cdot,g',\cdot} \in G \dt f\,(g'\,u)\,(g\,u)
+  } \\
   %
   \textbf{est}_u &\coloneq
   \l f \dt \M_u^f \\
@@ -544,20 +547,19 @@ circles, squares, etc. \dots
   \textbf{oldest}_u &=
   \textbf{est}\,\textbf{older} =
   \l G \dt
-    \set{%
-      \pair{\cdot}{g} \in G
-    \giv
-      \neg\exists\pair{\cdot}{g'} \in G \dt \cn{age}\,(g'\,u) > \cn{age}\,(g\,u)
-    } \\
+  \set{%
+    \tup{\cdot,g,\cdot} \in G
+  \giv
+    \neg\exists\tup{\cdot,g',\cdot} \in G \dt
+    \cn{age}\,(g'\,u) > \cn{age}\,(g\,u)
+  } \\
   \textbf{the}_u &\coloneq
-  \l \mathcal{M}ckg \dt |G_u| = 1 \dt G, \\
-  &\hphantom{{}\coloneq{}}
-    \text{where}\ 
-    G = \mathcal{M}_u\uset{%
-      k\,x\,g'
-    \giv
-      \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
-    }
+  \l \mathcal{M}ckg \dt
+  \uset{%
+    k\,x\,g'\,h'
+  \giv
+    \tup{\T,g',h'} \in c\,x\,g^{u\mapsto x}\,\post{h}{\one_u\circ\M_u}
+  }
 \end{align*}
 \end{spreadlines}
 %
@@ -599,34 +601,34 @@ circles, squares, etc. \dots
   %
   \leadsto
   \p{%
-    \textbf{the}_v\,\M_v^\cn{ag}\,\p{\l yg \dt \set{\pair{\cn{sq}\,y}{g}}}
+    \textbf{the}_v\,\M_v^\cn{ag}\,\p{\l ygh \dt \set{\tup{\cn{sq}\,y,g,h}}}
   }^\reset \\
   %
   %
   &\leadsto
   \p{%
-    \btower{\l g \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}, y}
+    \btower{%
+      \l gh \dt
+      \uset{%
+        \hole\,g^{v\mapsto y}\,\post{h}{\one_v\circ\M_v^\cn{ag}}
+      \giv
+        \cn{sq}\,y
+      }
+    , y
+    }
   }^\reset
   %
   \leadsto
   \btower{%
-    \l g \col |G_v| = 1 \dt
+    \l gh \col \abs{G_v} = 1 \dt
     \uset{%
-      \hole\,g^{v\mapsto y}
+      \hole\,g^{v\mapsto y}\,h
     \giv
       \begin{array}{L}
         \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
       \end{array}
     },
-    y\vphantom{%
-      \uset{%
-        \hole\,g^{v\mapsto y}
-      \giv
-        \begin{array}{L}
-          \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
-        \end{array}
-      }
-    }
+    y
   }
 \end{align*}
 %
@@ -636,14 +638,14 @@ circles, squares, etc. \dots
   \item
     Resetting the superlative DP has two effects: (1) it fixes the set of
     individuals that the superlative operator $\M$ compares, in this case
-    squirrels with respect to age; and (2) it freezes the presupposition
-    associated with the definite article.
+    squirrels with respect to age; and (2) it freezes the postsup associated
+    with the definite article.
   \item
-    Here $G = \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y,\ \forall
-    z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y}$. This set could in principle
-    have multiple winners (multiple squirrels with the same age). The definite
-    determiner rules that out; all the $g \in G$ need to point $v$ to
-    \emph{the same} squirrel.
+    Here $G = \set{\tup{y,g^{v\mapsto y},\one_v\circ\M_v} \giv \cn{sq}\,y,\
+    \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y}$. This set could in
+    principle have multiple winners (multiple squirrels with the same greatest
+    age), but the definite determiner rules that out; all the $g \in G$ need
+    to point $v$ to \emph{the same} squirrel.
 \end{itemize}
 \end{minisplit}
 
@@ -699,9 +701,9 @@ circles, squares, etc. \dots
       \FSL{%
       %
       \bitt{%
-        \l g \col |G_v| = 1 \dt
+        \l gh \col |G_v| = 1 \dt
           \uset{%
-            \hole\,g^{v\mapsto y}
+            \hole\,g^{v\mapsto y}\,h
           \giv
             \begin{array}{L}
               \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
@@ -717,9 +719,9 @@ circles, squares, etc. \dots
   \p{%
     \bitt{%
       \textbf{the}_u\,\p{%
-        \l xg \col |G_v| = 1 \dt
+        \l xgh \col |G_v| = 1 \dt
           \uset{%
-            \hole\,g^{v\mapsto y}
+            \hole\,g^{v\mapsto y}\,h
           \giv
             \cn{sq}\,y,\
             \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
@@ -734,9 +736,9 @@ circles, squares, etc. \dots
   &
   \p{%
     \bitt{%
-      \l g \col |G_v| = 1 \dt
+      \l gh \col |G_v| = 1 \dt
         \uset{%
-          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,\post{h}{\one_u}
         \giv
           \begin{array}{L}
           \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x, \\
@@ -749,9 +751,9 @@ circles, squares, etc. \dots
   %
   &
   \bitt{%
-    \l g \col |G'_u| = |G_v| = 1 \dt
+    \l gh \col |G'_u| = |G_v| = 1 \dt
       \uset{%
-        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
       \giv
         \begin{array}{L}
         \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x, \\
@@ -770,10 +772,9 @@ circles, squares, etc. \dots
     squirrel.
   \item
     The outer definite has no explicit maximization operator. For
-    simplicity, I assume that in such cases, it defaults to the basic plural
-    max operator introduced above. This will have no effect when the
-    predicates are all singular, but the uniqueness presupposition it brings
-    to bear is still forceful.
+    simplicity, for now, I assume that that the $\mathcal{M}$ argument to
+    $\textbf{the}$ is optional. But even max-less, the definite still imposes
+    a uniquness condition on the values assigned to $u$.
   \item
     Altogether, after the host DP has been reset, we will have an
     essentially nondeterministic (continuized) individual with two
@@ -833,7 +834,12 @@ circles, squares, etc. \dots
       \FSL{%
       %
       \bitt{%
-        \l g \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+        \l gh \dt
+        \uset{%
+          \hole\,g^{v\mapsto y}\post{h}{\one_v\circ\M_v^\cn{ag}}
+        \giv
+          \cn{sq}\,y
+        }
       }{y}
       } }
     } }
@@ -844,7 +850,12 @@ circles, squares, etc. \dots
   \p{%
     \bitt{%
       \textbf{the}_u\,\p{%
-        \l xg \dt \M_v^\cn{ag}\uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+        \l xgh \dt
+        \uset{%
+          \hole\,g^{v\mapsto y}\post{h}{\one_v\circ\M_v^\cn{ag}}
+        \giv
+          \cn{sq}\,y
+        }
       }
     }{%
       \cn{circ}\,x \land \cn{with}\,y\,x
@@ -855,9 +866,10 @@ circles, squares, etc. \dots
   &
   \p{%
     \bitt{%
-      \l g \dt
+      \l gh \dt
         \uset{%
           \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+               \,\post{\p{\post{h}{\one_u}}}{\one_v\circ\M_v}
         \giv
           \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x
         }
@@ -867,7 +879,7 @@ circles, squares, etc. \dots
   %
   &
   \bitt{%
-    \l g \col |G_u| = |G_v| = 1 \dt
+    \l gh \col |G_u| = |G_v| = 1 \dt
       \uset{%
         \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
       \giv
