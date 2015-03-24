@@ -533,6 +533,14 @@ circles, squares, etc. \dots
   \textbf{older} &\coloneq
   \l xy \dt \cn{age}\,x > \cn{age}\,y \\
   %
+  \textbf{the}_u &\coloneq
+  \l \mathcal{M}ckgh \dt
+  \uset{%
+    k\,x\,g'\,h'
+  \giv
+    \tup{\T,g',h'} \in c\,x\,g^{u\mapsto x}\,\post{h}{\one_u\circ\mathcal{M}}
+  }
+  %
   \M_u^f &\coloneq
   \l G \dt
   \set{%
@@ -545,20 +553,13 @@ circles, squares, etc. \dots
   \l f \dt \M_u^f \\
   %
   \textbf{oldest}_u &=
-  \textbf{est}\,\textbf{older} =
+  \textbf{est}_u\,\textbf{older} =
   \l G \dt
   \set{%
     \tup{\cdot,g,\cdot} \in G
   \giv
     \neg\exists\tup{\cdot,g',\cdot} \in G \dt
     \cn{age}\,(g'\,u) > \cn{age}\,(g\,u)
-  } \\
-  \textbf{the}_u &\coloneq
-  \l \mathcal{M}ckg \dt
-  \uset{%
-    k\,x\,g'\,h'
-  \giv
-    \tup{\T,g',h'} \in c\,x\,g^{u\mapsto x}\,\post{h}{\one_u\circ\M_u}
   }
 \end{align*}
 \end{spreadlines}
@@ -935,66 +936,75 @@ circles, squares, etc. \dots
 
 \section{Focus}
 
-\begin{minipage}[t]{0.6\textwidth} % Adding Focus
-\begin{spreadlines}{0em}
+\begin{minisplit} % Adding Focus
+\begin{spreadlines}{0em} % Focus fragment
 \begin{align*}
-  % \M_u^f &=
-  % \lambda G \dt
-  %   \set{%
-  %     \pair{\cn{\cdot}}{g} \in G
-  %   \giv
-  %     \neg\exists\pair{\cdot}{g'} \in G \dt f\,(g\,u)\,(g'\,u)
-  %   } \\
-  % %
   \M_u^f &=
   \lambda G \dt
     \set{%
-      \pair{\cn{\alpha}}{g}
+      \tup{\cn{\alpha}, g, h}
     \giv
-      \pair{\pair{\cn{\alpha}}{\cdot}}{g} \in G
+      \tup{\tup{\cn{\alpha}, \cdot}, g, h} \in G
       ,\ \, 
-      \cn{truthy}\,\alpha
-      ,\ \, 
-      \neg\exists\pair{\pair{\cdot}{\beta}}{g'} \in G \dt
+      \neg\exists\tup{\tup{\cdot, \beta}, g', \cdot} \in G \dt
         \ms{\bigvee}\!\beta \land f\,(g\,u)\,(g'\,u)
     } \\
   %
-  \textbf{larger} &=
-  \lambda xy \dt \cn{size}\,x < \cn{size}\,y \\
+  % \textbf{older} &=
+  % \lambda xy \dt \cn{age}\,x < \cn{age}\,y \\
+  % %
+  % \textbf{est}_u &=
+  % \lambda f \dt \M_u^f\\
   %
-  \textbf{est}_u &=
-  \lambda f \dt \M_u^f\\
-  %
-  \textbf{largest}_u &=
-  \textbf{est}_u\,\textbf{larger} =
-  \M_u^\cn{sz} =
+  \textbf{oldest}_u &=
+  \textbf{est}_u\,\textbf{older} \\
+  &=
   \lambda G \dt
     \set{%
-      \pair{\cn{T}}{g}
+      \tup{\T, g, h}
     \giv
-      \pair{\cn{T}}{g} \in G
-      \land
-      \neg\exists\pair{\cn{T}}{g'} \in G \dt
-        \cn{size}\,(g\,u) < \cn{size}\,(g'\,u)
-    } \\
+      \begin{array}{L}
+      \tup{\tup{\T,\cdot}, g, h} \in G,\\
+      \neg\exists\tup{\tup{\cdot, \beta}, g', \cdot} \in G \dt
+        \bigvee\!\!\beta \land \cn{age}\,(g\,u) < \cn{age}\,(g'\,u)
+      \end{array}
+    }
   %
-  \textbf{the}_u &=
-  \lambda\mathcal{M}ckg \col |G'_u| = 1 \dt G',
-  \ \textrm{where} \ 
-  G' = \mathcal{M}\uset{%
-    k\,x\,g'
-  \giv
-    x\in \mathcal{D}_e,\ \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
-  }
+  % \textbf{the}_u &=
+  % \lambda\mathcal{M}ckgh \dt
+  % \uset{%
+  %   k\,x\,g'\,h'
+  % \giv
+  %   x\in \mathcal{D}_e,\
+  %   \tup{\T,g',h'} \in c\,x\,g^{u\mapsto x}\,\post{h}{\one_u\circ\mathcal{M}}
+  % }
 \end{align*}
 \end{spreadlines}
-\end{minipage}
-%
-%
-\begin{minipage}[t]{0.4\textwidth} % Focus Notes
-Adding focus-sensitivity
 
-\end{minipage}
+\vspace{-1.2em}
+\parbox{0.95\textwidth}{%
+\begin{itemize}
+  \item
+    Note that $\textbf{the}$ is exactly as before. It is neutral between
+    focus-sensitive and focus-sensitive ``maximizers''.
+\end{itemize}
+}
+%
+\splitmini
+%
+\begin{itemize} % Focus notes
+  \item
+    Superlatives are apparently focus-sensitive. \objl{John sold
+    MARY the most expensive painting} means he sold Mary a more expensive
+    painting than he sold anyone else.
+  \item
+    To prepare for this, the entry for $\textbf{est}$ here expects to see
+    outputs with focus-pairs. It filters out the assignments
+    that either fail to satisfy the ``ordinary'' component of their prejacent,
+    or fail to assign $u$ to a value whose $f$-degree is greater than that of
+    every other acceptable assignment's choice of $u$.
+\end{itemize}
+\end{minisplit}
 
 \dotbreak[Derivations]
 
