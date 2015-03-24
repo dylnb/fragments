@@ -893,17 +893,35 @@ circles, squares, etc. \dots
 \begin{itemize} % Rel DP Sup Notes
   \item
     The only difference here is that we do not reset the inner DP, which
-    staves off its presupposition until more information is accumulated in
-    its scope
+    staves off its postsup until more of the context is accumulated in
+    its scope. By the time the postsup is actually evaluated, all of the
+    potential output assignments will map $v$ to squirrles \emph{that are in
+    some circus}.
   \item
-    But now when the outer DP is reset, it sets the presuppositions
-    of \emph{both} definites
+    Resetting the outer DP fixes the suppositions of \emph{both} definites,
+    bolting them down to the same set of outputs.
   \item
     For any input $g$, $G =
-    \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
-      \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
-      onto a circle in some square that it maps to $v$.
+    \set{%
+      \tup{%
+        x
+      , g^{\substack{u\mapsto x\\ v\mapsto y}}
+      , \post{\one_u}{\one_v\circ\M_v}
+      }
+    \giv
+      \cn{sq}\,x,\ \cn{circ}\,y,\ \cn{with}\,y\,x
+    }$
+    is the set out outputs that assign $v$ to a squirrel and $v$ to some
+    circus employing it.
   \item
+    Before either uniqueness check is enforced, $\M_v$ will filter out any
+    assignments that are dominated $v$-wise --- that is, any assignments that
+    send $v$ to a younger circus squirrel than they could have.
+  \item
+    Then, $\one_v$ will guarantee that there is exactly one such $v$ across
+    all the surviving $g$s, in effect guaranteeing that there is exactly one
+    circus squirrel that is older than all the others. Subsequently, $\one_u$
+    will enforce that squirrel's no-compete clause with his circus.
     So requiring that there be exactly one such $v$ is tantamount to
     requiring that there be exactly one square \emph{that has a circle in
     it} and exactly one circle \emph{in that square}. In other words, there
