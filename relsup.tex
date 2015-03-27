@@ -539,7 +539,7 @@ circles, squares, etc. \dots
     k\,x\,g'\,h'
   \giv
     \tup{\T,g',h'} \in c\,x\,g^{u\mapsto x}\,\post{h}{\one_u\circ\mathcal{M}}
-  }
+  } \\
   %
   \M_u^f &\coloneq
   \l G \dt
@@ -879,14 +879,19 @@ circles, squares, etc. \dots
   %
   %
   &
-  \bitt{%
+  \tower{%
     \l gh \col |G_u| = |G_v| = 1 \dt
-      \uset{%
-        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
-      \giv
-        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x
-      }
-  }{x}
+    \uset{%
+      \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
+    \giv
+      \begin{array}{L}
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x\\
+        \forall z \col \sq \dt
+        \p{\exists a \dt \cn{with}\,z\,a} \Rightarrow \neg\,\cn{older}\,z\,a
+      \end{array}
+    },
+    x
+  }
 \end{align*}
 %
 \splitmini
@@ -922,12 +927,9 @@ circles, squares, etc. \dots
     Then, $\one_v$ will guarantee that there is exactly one such $v$ across
     all the surviving $g$s, in effect guaranteeing that there is exactly one
     circus squirrel that is older than all the others. Subsequently, $\one_u$
-    will enforce that squirrel's no-compete clause with his circus.
-    So requiring that there be exactly one such $v$ is tantamount to
-    requiring that there be exactly one square \emph{that has a circle in
-    it} and exactly one circle \emph{in that square}. In other words, there
-    should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
-    such that $\cn{in}\,y\,x$.
+    will enforce that squirrel's no-compete clause with his particular circus.
+    Altogether, this will ensure that one circus squirrel is older than all
+    the others, and that he works for exactly one circus.
 \end{itemize}
 \end{minisplit}
 
@@ -942,9 +944,9 @@ circles, squares, etc. \dots
   \M_u^f &=
   \lambda G \dt
     \set{%
-      \tup{\cn{\alpha}, g, h}
+      \tup{\cn{\T}, g, h}
     \giv
-      \tup{\tup{\cn{\alpha}, \cdot}, g, h} \in G
+      \tup{\tup{\cn{\T}, \cdot}, g, h} \in G
       ,\ \, 
       \neg\exists\tup{\tup{\cdot, \beta}, g', \cdot} \in G \dt
         \ms{\bigvee}\!\beta \land f\,(g\,u)\,(g'\,u)
@@ -986,7 +988,7 @@ circles, squares, etc. \dots
 \begin{itemize}
   \item
     Note that $\textbf{the}$ is exactly as before. It is neutral between
-    focus-sensitive and focus-sensitive ``maximizers''.
+    focus-sensitive and focus-insensitive ``maximizers''.
 \end{itemize}
 }
 %
@@ -1008,47 +1010,89 @@ circles, squares, etc. \dots
 
 \dotbreak[Derivations]
 
-\begin{minipage}[t]{0.6\textwidth} % Focus Derivs
+\begin{minisplit} % Focus Derivs
 \begin{align*}
-  \bitttt{\hole}{%
-    \cn{j}^\F \star \p{\l j \dt \hole}
-  }{%
-    j^\rhd \star \p{\l x \dt \hole}
-  }{x}
-%
-\FSL{%
-  \bitttt{\hole}{\hole}{\hole}{\cn{drew}}
-}
-%
-\BSL{%
-  \bitttt{%
-    \lambda g \dt
-      \M_u \uset{%
-        \hole\,g^{u\mapsto y}
-      \giv
-        \cn{sq}\,y
-      }
-  }{\hole}{\hole}{y}
-}
-\end{align*}  
-\begin{align*}
-  \ttower{%
-    A, A,
-    S, S,
-    \l x \dt x,
-  } \\
-  %
+  \p{
   \btower{%
-    \textbf{the}_v\,\p{\l y \dt \hole},
-    y
+    \p{\eta\,\cn{j}}^\rhd \bind \p{\l j \dt \hole},
+    j^\F \star \p{\l x \dt \hole},
+    x
   }
-\end{align*}
-\end{minipage}
+  %
+  \FSL{%
+  \btower{%
+    \hole,
+    \hole,
+    \cn{drew}
+  } }
+  %
+  \BSL{%
+  \btower{%
+    \lambda gh \dt
+    \uset{%
+      \hole\,g^{v\mapsto y}\,\post{h}{\one_u\circ\M_v^\cn{ag}}
+    \giv
+      \cn{sq}\,y
+    },
+    \hole,
+    y
+  } } }^\reset \\
+  %
+  \p{%
+  \btower{%
+    \l gh \dt
+    \uset{%
+      \hole\,g^{\substack{u\mapsto \cn{j}\\ v\mapsto y}}
+           \,\post{h}{\one_u\circ\M_v^\cn{ag}}
+    \giv
+      \cn{sq}\,y
+    },
+    \cn{j}^\F \bind \x \dt \hole,
+    \cn{drew}\,y\,x
+  } }^\reset \\
+  %
+  \p{%
+  \btower{%
+    \l gh \col |G_u| = 1 \dt
+    \uset{%
+      \hole\,g^{\substack{u\mapsto\cn{j}\\ v\mapsto y}}\,h
+    \giv
+      \begin{array}{L}
+        \cn{sq}\,y,\ \
+        \cn{drew}\,y\,\cn{j},\\
+        \forall z \col \cn{sq} \dt
+        \exists a \dt \cn{drew}\,z\,a \Rightarrow \neg\,\cn{older}\,z\,y
+      \end{array}
+    } 
+  }
+  }
+\end{align*}  
 %
+\splitmini
 %
-\begin{minipage}[t]{0.4\textwidth}
-John drew the largest square
-\end{minipage}
+\begin{itemize}
+  \item
+    The superlative needs to outscope focus so that it can filter out squares
+    drawn by John's alternatives. This is effectively guaranteed by stashing
+    the superlative operator in the postsuppositional cubby, but we want it to
+    out-tower focus, just so the reset operator works out (though this can
+    probably be generalized).
+  \item
+    Here for the first time, we see the index on $\textbf{the}$ coming apart
+    from that on $\M$. This is because, intuitively, to me anyway, the
+    \objl{the} of relative \objl{the oldest} targets \emph{John}, not the
+    squares that people have drawn. It says that John is \emph{the winner} of
+    the square-drawing contest, regardless of how many winning squares he has
+    drawn.
+  \item
+    $\M_v$ keeps all of the $g$s that map $v$ to a square that (i) John drew,
+    and (ii) is at least as big as any square that anybody drew. If there
+    aren't any such squares, the sentence is false. If there are any such
+    squares, the sentence is guaranteed to succeed because $\one_u$ can't
+    fail. It checks that all of the outputs map $u$ to the same individual,
+    but of course they do; they all map $u$ to John (by design).
+\end{itemize}
+\end{minisplit}
 
 \dotbreak
 
