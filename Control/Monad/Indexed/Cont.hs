@@ -21,7 +21,7 @@ module Control.Monad.Indexed.Cont
 	) where
 
 import Control.Applicative
-import Data.Pointed
+-- import Data.Pointed
 -- import Control.Monad.Trans
 import Control.Monad.Identity
 import Control.Monad.Indexed
@@ -58,8 +58,8 @@ instance Monad m => IxMonadCont (IxContT m) where
 instance Monad m => Functor (IxContT m i j) where
 	fmap = imap
 
-instance Monad m => Pointed (IxContT m i i) where
-	point = ireturn
+-- instance Monad m => Pointed (IxContT m i i) where
+-- 	point = ireturn
 
 instance Monad m => Applicative (IxContT m i i) where
 	pure = ireturn
@@ -104,8 +104,8 @@ runIxCont_ m = runIxCont m id
 instance Functor (IxCont i j) where
 	fmap = imap
 
-instance Pointed (IxCont i i) where
-	point = ireturn
+-- instance Pointed (IxCont i i) where
+-- 	point = ireturn
 
 instance Applicative (IxCont i i) where
 	pure = ireturn

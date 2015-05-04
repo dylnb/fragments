@@ -3,10 +3,10 @@ module ExcScope where
 -- A port of the monadic denotational semantics for a fragment of English, as
 -- presented in Charlow 2014: "On the semantics of exceptional scope".
 
-import ExcScope.Model
-import ExcScope.IxPrelude
+import Model.Model
 import Control.Monad.State
 import Control.Monad.Indexed
+import Control.Monad.IndexedExtras
 import Control.Monad.Indexed.Cont
 import Control.Exception (assert)
 

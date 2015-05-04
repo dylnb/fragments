@@ -1,4 +1,4 @@
-module ExcScope.IxPrelude where
+module Control.Monad.IndexedExtras where
 
 import Control.Monad.Indexed
 import Control.Monad.Indexed.Cont
@@ -11,7 +11,7 @@ ixcont :: ((a -> o) -> r) -> IxCont r o a
 ixcont m = IxCont $ IxContT $ \k -> Identity $ m (runIdentity . k)
 
 
--- Reclaim some useful Control.Monad auxiliary functions
+-- Rebuild some useful Control.Monad auxiliary functions
 ixliftM :: IxMonad m => (t -> b) -> m i k t -> m i k b
 ixliftM f m = ireturn f `iap` m
 
