@@ -33,7 +33,7 @@
 }
 \newcommand{\set}[1]{\SET*{#1}}
 % grand union: \uset{ ... \giv ... } = U{ ... | ... }
-\DeclarePairedDelimiterXPP\USET[1]\bigcup\{\}{}{%
+\DeclarePairedDelimiterXPP\USET[1]{\!\bigcup}\{\}{}{%
   \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
   #1
 }
@@ -239,7 +239,7 @@
 \makeatletter
 \newcommand{\tower}[2][\my@btows]{%
   \ensuremath{\mathinner{%
-      \begin{tabular}[c]{@{}c@{}}%
+      \begin{tabular}[c]{@{}>{$\displaystyle}c<{$}@{}}%
         #1 #2,\relax\noexpand\@eolst%
       \end{tabular}%
   }}%

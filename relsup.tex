@@ -76,9 +76,9 @@ m \msl n
   m^\bind\,\p{\l xgh \dt \set{\tup{x,g^{u\mapsto x},h}}}
 \end{align*}
 
-\dotbreak[Postsuppositions]
+\dotbreak[Evaluation]
 
-\begin{minisplit} % Postsuppositions
+\begin{minisplit} % Evaluation
 \begin{align*}
   m^\reset &\coloneq
   \p{%
@@ -110,7 +110,7 @@ m \msl n
 %
 \splitmini
 %
-\begin{itemize} % Postsup Notes
+\begin{itemize} % Evaluation Notes
   \item
     Following Brasoveanu 2012, contexts are split into two components, an
     assignment function, and a ``postsupposition''. Postsups here have the
@@ -196,14 +196,14 @@ m \msl n
   %
   \leadsto
   \p{%
-    \textbf{the}_v\,\p{\l yg \dt \set{\pair{\cn{sq}\,y}{g}}}
+    \textbf{the}_v\,\p{\l ygh \dt \set{\tup{\cn{sq}\,y, g, h}}}
   }^\reset \\
   %
   %
   &\leadsto
   \p{%
     \btower{%
-      \l gh \dt \uset{\hole\,g^{v\mapsto y}\,\post{h}{\one_u} \giv \cn{sq}\,y},
+      \l gh \dt \uset{\hole\,g^{v\mapsto y}\,\post{h}{\one_v} \giv \cn{sq}\,y},
       y
     }
   }^\reset
@@ -444,8 +444,9 @@ m \msl n
       \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}\,h
     \giv
       \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
-    }
-  }{x}
+    },
+    x
+  }
 \end{align*}
 %
 \splitmini
@@ -487,7 +488,7 @@ m \msl n
   \l Px \dt x \in \set{\mathlarger{\oplus} P' \giv P' \subseteq P} \\
   %
   \textbf{the}_u &\coloneq
-  \l ckgh \col \dt
+  \l ckgh \dt
   \uset{%
     k\,x\,g' h'
   \giv
@@ -496,11 +497,16 @@ m \msl n
   %
   \M_u &\coloneq
   \l G \dt
-    \set{%
-      \tup{\cdot, g, \cdot} \in G
-    \giv
-      \neg\exists\tup{\cdot,g',\cdot} \in G \dt g'\,u \sqsupset g\,u
-    }
+  \set{%
+    \tup{\cdot, g, \cdot} \in G
+  \giv
+    \neg\exists\tup{\cdot,g',\cdot} \in G \dt g'\,u \sqsupset g\,u
+  } \\
+  %
+  \textbf{in} &\coloneq
+  \l XY \dt
+  \p{\forall x<X \dt \exists y<Y \dt \cn{in}\,x\,y} \land
+  \p{\forall y<Y \dt \exists x<X \dt \cn{in}\,x\,y}
 \end{align*}  
 \end{spreadlines}
 %
@@ -516,12 +522,381 @@ m \msl n
       are strictly dominated, in the sense that they assign $u$ to a value
       that is a proper part of something assigned to $u$ by some other $g' \in
       G$.
+    \item
+      Predicates and relations are extended to sums in the usual cumulative
+      way (Link, \dots)
   \end{itemize}
 \end{minisplit}
 
-\dotbreak[Derivations]
+\dotbreak[Plural Reset]
 
-circles, squares, etc. \dots
+\begin{minisplit} % Plural Resets
+\begin{align*} % Plural Reset Deriv
+  \sv{\textrm{the squares}}
+  %
+  &\leadsto
+  \p{%
+    \btower{%
+      \textbf{the}_v\,\p{\l Y \dt \hole},
+      Y
+    }
+    %
+    \BSL{%
+    %
+    \btower{%
+      \hole,
+      \textbf{square}
+    }
+    %
+    \FSL{%
+    %
+    \btower{%
+      \hole,
+      \textbf{-s}
+    } } }
+  }^{\dnar\,\reset}
+  %
+  \leadsto
+  \p{%
+    \textbf{the}_v\,\p{\l Ygh \dt \set{\tup{\cn{sq's}\,Y, g, h}}}
+  }^\reset \\
+  %
+  %
+  &\leadsto
+  \p{%
+    \btower{%
+      \l gh \dt
+      \uset{%
+        \hole\,g^{v\mapsto Y}\,\post{h}{\one_u\circ\M_v}
+      \giv
+        \cn{sq's}\,Y
+      },
+      Y
+    }
+  }^\reset \\
+  %
+  %
+  &\leadsto
+  \btower{%
+    \l gh \col \abs{G_v} = 1 \dt
+    \uset{%
+      \hole\,g^{v\mapsto Y}\,h
+    \giv
+      \cn{sq}\,Y,\ \forall Z\col\cn{sq's} \dt Z \not\sqsupset Y
+    },
+    Y
+  }
+\end{align*}
+%
+\splitmini
+%
+\begin{itemize} % Reset Notes
+  \item
+    Once again, resetting $\sv{\textrm{the square}}$ in the last reduction
+    step has no effect on its semantic shape, because it's still essentially
+    $\sv{\textrm{a square}}$.
+  \item
+    But again, it fixes the constituent's postsup. For any incoming $g$, $G$
+    will be equal to $\set{\tup{y, g^{v\mapsto Y}, \one_v\circ\M_v} \giv
+    \cn{sq's}\,Y}$. The only output triples that will survive the $\M_v$
+    filter will be those that are undominated in their choice of $v$, i.e.,
+    those that assign $v$ to a sum that isn't part of any sum assigned to $v$
+    by any other output. The subsequent $\one_v$ filter will then guarantee
+    that there is exactly one such maximal referent across outputs (this
+    should generally by trivial, given usual mereological assumptions).
+\end{itemize} 
+\end{minisplit}
+
+\dotbreak[Absolute Plural Reading]
+
+\begin{minisplit}[0.55] % Absolute Plurals
+\begin{align*} % Absolute Plural Deriv
+  &
+  \sv{\textrm{the circles in the squares}} \\
+  %
+  %
+  &
+  \p{%
+    \btower{\textbf{the}_u\,\p{\l X \dt \hole}, X}
+    %
+    \BSL{%
+    %
+    \p{%
+      \btower{\hole, \textbf{circles}}
+      %
+      \MSL{%
+      %
+      \btower{\hole, \textbf{in}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \btower{\textbf{the}_v\,\p{\l Y \dt \hole}, Y}
+        %
+        \BSL{%
+        %
+        \btower{\hole, \textbf{squares}}
+        }
+      }^{\dnar\,\reset} } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \btower{\textbf{the}_u\,\p{\l X \dt \hole}, X}
+    %
+    \BSL{%
+    %
+    \p{%
+      \btower{\hole, \textbf{circles}}
+      %
+      \MSL{%
+      %
+      \btower{\hole, \textbf{in}}
+      %
+      \FSL{%
+      %
+      \btower{%
+        \l gh \col \abs{G_v} = 1 \dt
+        \uset{%
+          \hole\,g^{v\mapsto Y}\,h
+        \giv
+          \begin{array}{L}
+            \cn{sq's}\,Y, \\
+            \forall Z\col\cn{sq's} \dt Z \not\sqsupset Y
+          \end{array}
+        },
+        Y
+      } } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \btower{%
+      \textbf{the}_u\,\p{%
+        \l Xgh \col \abs{G_v} = 1 \dt
+        \uset{%
+          \hole\,g^{v\mapsto Y}\,h
+        \giv
+          \cn{sq}\,Y,\ \forall Z\col\cn{sq's} \dt Z \not\sqsupset Y
+        }
+      },
+      \cn{circ's}\,X \land \cn{in}\,Y\,X
+    }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \btower{%
+      \l gh \col \abs{G_v} = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto X\\ v\mapsto Y}}
+             \,\post{h}{\one_u\circ\M_u}
+      \giv
+        \begin{array}{L}
+          \cn{sq's}\,Y,\ \cn{circ's}\,X,\ \cn{in}\,Y\,X, \\
+          \forall Z\col\cn{sq's} \dt Z \not\sqsupset Y
+        \end{array}
+      },
+      X
+    }
+  }^\reset \\
+  %
+  %
+  &
+  \btower{%
+    \l gh \col \abs{G_v} = \abs{G'_u} = 1 \dt
+    \uset{%
+      \hole\,g^{\substack{u\mapsto X\\ v\mapsto Y}}\,h
+    \giv
+      \begin{array}{L}
+        \cn{sq}\,Y,\ \cn{circ}\,X,\ \cn{in}\,Y\,X, \\
+        \forall Z\col\cn{sq's} \dt Y \not\sqsubset Z, \\
+        \forall Z \dt \cn{circ's}\,Z \land \cn{in}\,Y\,Z
+                      \Rightarrow X \not\sqsubset Z
+      \end{array}
+    },
+    X
+  }
+\end{align*}
+%
+\splitmini
+%
+\begin{itemize} % Absolute Plural Notes
+  \item
+    The inner definite is reset, freezing its supposition as above. $\M_v$
+    will throw out any outputs that do not assign $v$ to the largest sum of
+    circles, leaving $G = \set{\tup{Y, g^{v\mapsto Y}, \one_v\circ\M_v} \giv
+    \cn{sq's}\,Y,\ \forall Z\col\cn{sq's} \dt Z \not\sqsupset Y}$. When the
+    input assignment $g$ is eventually inserted, $\one_v$ will guarantee that
+    this individual is constant across possible outputs (i.e., unique).
+  \item
+    When the host DP is reset, its maximality supposition $\M_u$ is applied to the
+    set of outputs $ G' = \set{\tup{x, g^{\substack{u\mapsto X\\ v\mapsto
+    Y}}, \one_u\circ\M_u} \giv \cn{sq's}\,Y,\ \cn{circ's}\,X,\ \cn{in}\,Y\,X,
+    \ \forall Z\col\cn{sq's} \dt Z \not\sqsupset Y}$. This is the set out
+    assignments that map $v$ to a (the) maximal sum of squares, and $v$ to a
+    sum of circles that are (cumulatively) in that sum. The $\M_u$ filter will
+    discard from this set any outputs that do not map $u$ to as big a sum as
+    possible, i.e., the maximal sum of circles that are in $Y$. Finally
+    $\one_u$ will guarantee that this maximal sum is unique.
+  \item
+    For this whole update to be defined, it must be the case that every square
+    has at least one circle in it.
+\end{itemize}
+\end{minisplit}
+
+\newpage
+
+\dotbreak[Relative Plural (Haddock) Reading]
+
+\begin{minisplit} % Plural Haddock Definites
+\begin{align*} % Plural Haddock Deriv
+  &
+  \sv{\textrm{the circles in the squares}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l X \dt \hole}}{X}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circles}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\p{\l Y \dt \hole}}{Y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{squares}}
+        }
+      }^{\dnar} } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \btower{\textbf{the}_u\,\p{\l X \dt \hole}, X}
+    %
+    \BSL{%
+    %
+    \p{%
+      \btower{\hole, \textbf{circles}}
+      %
+      \MSL{%
+      %
+      \btower{\hole, \textbf{in}}
+      %
+      \FSL{%
+      %
+      \btower{%
+        \l gh \dt
+        \uset{\hole\,g^{v\mapsto Y}\,\post{h}{\one_v\circ\M_v} \giv \cn{sq's}\,Y}
+      , y
+      } } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \btower{%
+      \textbf{the}_u\,\p{%
+        \l Xgh \dt
+        \uset{\hole\,g^{v\mapsto Y}\,\post{h}{\one_v\circ\M_v} \giv \cn{sq's}\,Y}
+      },
+      \cn{circ's}\,X \land \cn{in}\,Y\,X
+    }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \btower{%
+      \l gh \dt
+      \uset{%
+        \hole\,
+        g^{\substack{u\mapsto X\\ v\mapsto Y}}\,
+        \post{\p{\post{h}{\one_u\circ\M_u}}}{\one_v\circ\M_v}
+      \giv
+        \cn{sq's}\,Y,\ \cn{circ's}\,X,\ \cn{in}\,Y\,X
+      },
+      X
+    }
+  }^{\reset} \\
+  %
+  %
+  &
+  \btower{%
+    \l gh \col \abs{G_v} = \abs{G_u} = 1 \dt
+    \uset{%
+      \hole\,g^{\substack{u\mapsto X\\ v\mapsto Y}}\,h
+    \giv
+      \cn{sq's}\,Y,\ \cn{circ's}\,X,\ \cn{in}\,Y\,X
+    },
+    X
+  }
+\end{align*}
+
+\vspace{-1.2em}
+\parbox{0.95\textwidth}{%
+\begin{itemize}
+  \item
+    This double-barreled cumulation and concomitant cardinatlity checking is
+    exactly as (is intended) in Brasoveanu 2012. This brings definites in line
+    with other cardinality post-supposing expressions like `exactly three'.
+\end{itemize}
+}
+%
+\splitmini
+%
+\begin{itemize} % Plural Haddock Notes
+  \item
+    As before, the only difference here is that we do not reset the inner DP,
+    which staves off its postsup until more information is accumulated in its
+    scope. So when the outer DP is eventually reset, it ends up fixing the
+    postsup of both definites to the same set of potential outputs.
+  \item
+    For any input $g$, the set of outputs $G$ that
+    $\one_u\circ\M_u\circ\one_v\circ\M_v$ will
+    target is given below. All of the outputs in this set will map $u$ to some
+    plurality of circles and $v$ to some plurality of squares (cumulatively)
+    containing those circles.\\
+    $G = \set{%
+      \tup{x, g^{\substack{u\mapsto X\\ v\mapsto Y}},
+             \post{\one_u\circ\M_u}{\one_v\circ\M_v}}
+    \giv
+      \cn{sq's}\,X,\ \cn{circ's}\,Y,\ \cn{in}\,Y\,X
+    }$.
+  \item
+    $\M_v$ will throw out any candidate output that is dominated by another in
+    its choice for $v$, and $\one_v$ will guarantee (trivially, as usual) that
+    there is exactly one such undominated candidate. That is, $\M_v$ will
+    filter out any outputs that do not assign $v$ to the maximal sum of
+    circle-containing squares.
+  \item
+    Likewise, $\M_u$ will then throw out any candidates that are dominated in
+    their choice for $u$; that is, any candidates that do not assign $u$ to
+    the maximal sum of circles that are contained in the sum total of
+    circle-containing squares. So by the end, we'll have a set of outputs all
+    of which assign $v$ to the totality of squares that contain (\emph{any}
+    circles) and $u$ to the totality of circles that are in (\emph{any})
+    squares.
+\end{itemize}
+\end{minisplit}
 
 \dotbreak\vspace{-1em}
 
@@ -617,17 +992,16 @@ circles, squares, etc. \dots
       }
     , y
     }
-  }^\reset
+  }^\reset \\
   %
-  \leadsto
+  %
+  &\leadsto
   \btower{%
     \l gh \col \abs{G_v} = 1 \dt
     \uset{%
       \hole\,g^{v\mapsto y}\,h
     \giv
-      \begin{array}{L}
-        \cn{sq}\,y,\\ \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
-      \end{array}
+      \cn{sq}\,y,\  \forall z\col\cn{sq} \dt \neg\,\cn{older}\,z\,y
     },
     y
   }
@@ -653,7 +1027,7 @@ circles, squares, etc. \dots
 \newpage
 \dotbreak[Absolute DP-Internal Superlatives]
 
-\begin{minisplit} % DP Superlatives, Absolute
+\begin{minisplit}[0.55] % DP Superlatives, Absolute
 \begin{align*} % Absolute DP Sup Deriv
   &
   \sv{\textrm{the circus with the oldest squirrel}} \\
@@ -886,7 +1260,7 @@ circles, squares, etc. \dots
     \giv
       \begin{array}{L}
         \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{with}\,y\,x\\
-        \forall z \col \sq \dt
+        \forall z \col \cn{sq} \dt
         \p{\exists a \dt \cn{with}\,z\,a} \Rightarrow \neg\,\cn{older}\,z\,a
       \end{array}
     },
@@ -1012,7 +1386,12 @@ circles, squares, etc. \dots
 
 \begin{minisplit} % Focus Derivs
 \begin{align*}
-  \p{
+  &
+  \sv{\textrm{John drew the oldest square}} \\
+  %
+  %
+  &
+  \p{%
   \btower{%
     \p{\eta\,\cn{j}}^\rhd \bind \p{\l j \dt \hole},
     j^\F \star \p{\l x \dt \hole},
@@ -1038,6 +1417,8 @@ circles, squares, etc. \dots
     y
   } } }^\reset \\
   %
+  %
+  &
   \p{%
   \btower{%
     \l gh \dt
@@ -1047,11 +1428,12 @@ circles, squares, etc. \dots
     \giv
       \cn{sq}\,y
     },
-    \cn{j}^\F \bind \x \dt \hole,
+    \cn{j}^\F \bind \p{\l x \dt \hole},
     \cn{drew}\,y\,x
   } }^\reset \\
   %
-  \p{%
+  %
+  &
   \btower{%
     \l gh \col |G_u| = 1 \dt
     \uset{%
@@ -1061,10 +1443,9 @@ circles, squares, etc. \dots
         \cn{sq}\,y,\ \
         \cn{drew}\,y\,\cn{j},\\
         \forall z \col \cn{sq} \dt
-        \exists a \dt \cn{drew}\,z\,a \Rightarrow \neg\,\cn{older}\,z\,y
+        \p{\exists a \dt \cn{drew}\,z\,a} \Rightarrow \neg\,\cn{older}\,z\,y
       \end{array}
     } 
-  }
   }
 \end{align*}  
 %
@@ -1180,9 +1561,9 @@ circles, squares, etc. \dots
 
 \dotbreak
 
-John sold the only cars \\
+% John sold the only cars \\
 
-Anna didn't give the only good talk
+% Anna didn't give the only good talk
 
 
 
