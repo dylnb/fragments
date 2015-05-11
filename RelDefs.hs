@@ -124,6 +124,8 @@ rap = ixliftM2 ($)
 -- ignoring type constructors:
 --     = \h m k -> h (\f -> m (\x -> k (f x)))
 
+cap :: K r o (a -> Bool) -> K o r' (a -> Bool) -> K r r' (a -> Bool)
+cap = ixliftM2 (liftM2 (&&))
 
 -- Second-Order Continuized Application
 
@@ -145,6 +147,9 @@ rrap = ixliftM2 rap
 -- ignoring type constructors:
 --      = \H M k -> H (\h -> M (\m -> k (h `rap` m)))
 
+ccap :: K s t (K r o (a -> Bool)) -> K t s' (K o r' (a -> Bool)) 
+                                  -> K s s' (K r r' (a -> Bool))
+ccap = ixliftM2 cap
 
 -- Infix combinators for left and right application
 
@@ -163,6 +168,15 @@ infixr 9 <\>
 (<\\>) :: K s t (K r o a) -> K t s' (K o r' (a -> b)) -> K s s' (K r r' b)
 (<\\>) = llap
 infixr 9 <\\>
+
+(<|>) :: K r o (a -> Bool) -> K o r' (a -> Bool) -> K r r' (a -> Bool)
+(<|>) = cap
+infixr 9 <|>
+
+(<||>) :: K s t (K r o (a -> Bool)) -> K t s' (K o r' (a -> Bool)) 
+                                  -> K s s' (K r r' (a -> Bool))
+(<||>) = ccap
+infixr 9 <||>
 -- ------------------------------------------------
 
 
@@ -446,14 +460,31 @@ some = ixcont _some
 
 -- Definites
 -- ------------------------------------------------
-_the :: Int -> (Ent -> M Bool) -> M Ent
-_the n p = tell nUnique >> _some p
-  where nUnique  = Post $ \xs -> assert (1 == nSize xs) xs
-        nSize xs = length $ nub [s!!n | (_,s) <- xs]
+_the :: Int -> Post -> (Ent -> M Bool) -> M Ent
+_the n h p = tell (h <> unique n) >> _some p
 
-the :: Int -> K (M Ent) (M Bool) Ent
-the n = ixcont $ _the n
+the :: Int -> Post -> K (M Ent) (M Bool) Ent
+the n h = ixcont $ _the n h
+
+-- shorthand for default 'the'
+the' :: Int -> K (M Ent) (M Bool) Ent
+the' n = the n mempty
 -- ------------------------------------------------
+
+-- POSTS
+unique :: Int -> Post
+unique n = Post $ \xs -> assert (1 == nSize xs) xs
+  where nSize xs = length $ nub [s!!n | (_,s) <- xs]
+
+tallest :: Int -> Post
+tallest n = Post $ \xs -> foldr maxes (take 1 xs) (tail xs)
+  where maxes x@(_,sx) ys@((_,sy):_) =
+          case compare (sx!!n) (sy!!n) of
+            GT -> [x]
+            EQ -> x:ys
+            LT -> ys
+
+
 
 -- Universals
 -- ------------------------------------------------
@@ -489,6 +520,28 @@ _that = (&&)
 that :: TTT (M r)
 that = conj
 
+
+{--
+
+"The person who envies boy2 is short"
+-- [good, because the only person who envies boy2 is boy1]
+eval $ (res $ up (the' 0) <\> envies </> b2) <\> sb
+
+"The person who envies boy3 is short"
+-- [failure, because both boy2 and boy1 envy boy3]
+eval $ (res $ up (the' 0) <\> envies </> b3) <\> sb
+
+"The tallest person who envies b4 is short"
+-- [good, boy3 is the (unique) tallest person who envies boy4, and he's short"
+eval $ (res $ up (the 0 $ tallest 0) <\> envies </> b4) <\> sb
+
+"The tallest person who likes b4 is tall"
+-- [failure, because both boy4 and girl4 like boy4, and are equally tall]
+eval $ (res $ up (the 0 $ tallest 0) <\> likes </> b4) <\> tb
+
+eval $ (res $ up some <\> envies </> res (up some <\> sb)) <\> sb
+
+--}
 
 
 -- ==============
