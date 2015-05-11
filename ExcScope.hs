@@ -6,7 +6,7 @@ module ExcScope where
 import Model.Model
 import Control.Monad.State
 import Control.Monad.Indexed
-import Control.Monad.IndexedExtras
+import Control.Monad.IxExtras
 import Control.Monad.Indexed.Cont
 import Control.Exception (assert)
 

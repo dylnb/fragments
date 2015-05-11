@@ -4,15 +4,14 @@ module ExcScopeW where
 -- presented in Charlow 2014: "On the semantics of exceptional scope",
 -- extended with intensional meanings
 
-import ExcScope.IxPrelude
-import ExcScope.WModel
+import Model.ModelW
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.List
 import Control.Monad.Indexed
+import Control.Monad.IxExtras
 import Control.Monad.Indexed.Cont
 import Control.Exception (assert)
-import Prelude hiding (Monad(..))
 
 -- =================
 -- ** TYPE SYSTEM ** 
