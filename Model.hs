@@ -28,10 +28,12 @@ instance Ord Ent where
 
 -- Atomic Individuals
 -- ------------------------------------------------
-boys, girls, poems :: [Ent]
+boys, girls, poems, circles, squares :: [Ent]
 boys     = map (\x -> Atom ("b",x)) [1..6]
 girls    = map (\x -> Atom ("g",x)) [1..6]
 poems    = map (\x -> Atom ("p",x)) [1..6]
+circles  = map (\x -> Atom ("c",x)) [1..6]
+squares  = map (\x -> Atom ("s",x)) [1..6]
 
 _b1, _b2, _b3, _b4, _b5, _b6 :: Ent
 [_b1, _b2, _b3, _b4, _b5, _b6] = boys
@@ -41,6 +43,12 @@ _g1, _g2, _g3, _g4, _g5, _g6 :: Ent
 
 _p1, _p2, _p3, _p4, _p5, _p6 :: Ent
 [_p1, _p2, _p3, _p4, _p5, _p6] = poems
+
+_c1, _c2, _c3, _c4, _c5, _c6 :: Ent
+[_c1, _c2, _c3, _c4, _c5, _c6] = circles
+
+_s1, _s2, _s3, _s4, _s5, _s6 :: Ent
+[_s1, _s2, _s3, _s4, _s5, _s6] = squares
 -- ------------------------------------------------
 
 -- Plural Individuals
@@ -54,7 +62,7 @@ shortpoems = Plur $ take 3 poems
 -- The Domain
 -- ------------------------------------------------
 domAtoms, domPlurs, univ :: [Ent]
-domAtoms = concat [boys, girls, poems]
+domAtoms = concat [boys, girls, poems, circles, squares]
 domPlurs = [shortboys, shortgirls, shortpoems]
 univ     = domAtoms ++ domPlurs
 -- ------------------------------------------------
@@ -65,17 +73,19 @@ univ     = domAtoms ++ domPlurs
 
 -- One-Place Relations
 -- ------------------------------------------------
-_boy, _girl, _poem, _thing :: Ent -> Bool
+_boy, _girl, _poem, _thing, _circle, _square :: Ent -> Bool
 
-_boy  = (`elem` boys)
-_girl = (`elem` girls)
-_poem = (`elem` poems)
-_thing = const True
+_boy    = (`elem` boys)
+_girl   = (`elem` girls)
+_poem   = (`elem` poems)
+_circle = (`elem` circles)
+_square = (`elem` squares)
+_thing  = const True
 -- ------------------------------------------------
 
 -- Two-Place Relations
 -- ------------------------------------------------
-_likes, _envies, _pities, _listensTo, _overwhelm :: Ent -> Ent -> Bool
+_likes, _envies, _pities, _listensTo, _overwhelm, _in :: Ent -> Ent -> Bool
 
 -- people like other people when their indices match:
 -- b1 likes g1, g3 likes b3, but g5 doesn't like b4 or g4
@@ -103,6 +113,8 @@ _listensTo _ _                       = False
 -- nothing else overwhelms anyone else
 _overwhelm y xs = xs == shortpoems && y == girls!!5 ||
                   xs == shortboys  && y `elem` take 3 boys
+
+_in a1 a2 = a1 == _c1 && a2 == _s1
 -- ------------------------------------------------
 
 -- Three-Place Relations
