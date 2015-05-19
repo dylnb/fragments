@@ -114,7 +114,7 @@ _listensTo _ _                       = False
 _overwhelm y xs = xs == shortpoems && y == girls!!5 ||
                   xs == shortboys  && y `elem` take 3 boys
 
-_in a1 a2 = a1 == _c1 && a2 == _s1
+_in a1 a2 = a1 == _s1 && a2 == _c1
 -- ------------------------------------------------
 
 -- Three-Place Relations
