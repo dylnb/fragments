@@ -214,7 +214,7 @@ run s m =
         [] -> []
         (((_, Post h), _) : _) -> h outs'
 -- should be:
---   outs >>= \((x,Endo h),s') -> h outs'
+--   outs >>= \((x, Post h),s') -> h outs'
 -- but because this is a list rather than a set, we'll end up with crazy
 -- amounts of duplication, so we fake it by just using the head's h to
 -- filter the outputs (this is ok because all outputs will have the same h)
@@ -341,7 +341,7 @@ disj = implus
 
 _neg :: M Bool -> M Bool
 _neg m = lift $ StateT $ \s -> [(not $ any fst $ run s m, s)]
--- this will flush postsups! good, bad?
+-- this will run postsups! good? bad?
 
 neg :: K (M r) (M r) (M Bool -> M Bool)
 neg = kunit _neg
@@ -463,15 +463,35 @@ some = ixcont _some
 _the :: Int -> Post -> (Ent -> M Bool) -> M Ent
 _the n h p = tell (h <> unique n) >> _some p
 
-the :: Int -> Post -> K (M Ent) (M Bool) Ent
-the n h = ixcont $ _the n h
+the :: Int -> Post -> K (E (M r)) (M Bool) Ent
+the n h = ixcont (\p -> ixlift $ _the n h p)
 
 -- shorthand for default 'the'
-the' :: Int -> K (M Ent) (M Bool) Ent
+the' :: Int -> K (E (M r)) (M Bool) Ent
 the' n = the n mempty
 -- ------------------------------------------------
 
--- POSTS
+-- Universals
+-- ------------------------------------------------
+_every :: (Ent -> M Bool) -> E (M Bool)
+_every p = ixcont $ \k -> _neg $ _some p --@ _neg . k
+
+every :: K (E (M Bool)) (M Bool) Ent
+every = ixcont _every
+-- ------------------------------------------------
+
+-- Possessives
+-- ------------------------------------------------
+-- poss :: E r -> ET r -> K r (E r)
+-- poss :: E r -> K (M Bool) o (Ent -> Bool) -> K r r (K (M Ent) o Bool)
+poss :: E (M r) -> ET (M Bool) -> K (M r) (M r) (K (M Ent) (M Bool) Bool)
+poss g p = kunit some <\\> (kunit p <\\> kunit of_) <//> kkunit g
+-- ------------------------------------------------
+
+
+-- POSTSUPPOSITIONS
+-- ================
+
 unique :: Int -> Post
 unique n = Post $ \xs -> assert (1 == nSize xs) xs
   where nSize xs = length $ nub [s!!n | (_,s) <- xs]
@@ -483,26 +503,6 @@ tallest n = Post $ \xs -> foldr maxes (take 1 xs) (tail xs)
             GT -> [x]
             EQ -> x:ys
             LT -> ys
-
-
-
--- Universals
--- ------------------------------------------------
-_every :: (Ent -> M Bool) -> E (M Bool)
-_every p = ixcont $ \k -> _neg $ _some p --@ _neg . k
-
-every :: K (E (M Bool)) (M Bool) Ent
-every = ixcont _every
--- recursive tower!
--- ------------------------------------------------
-
--- Possessives
--- ------------------------------------------------
--- poss :: E r -> ET r -> K r (E r)
--- poss :: E r -> K (M Bool) o (Ent -> Bool) -> K r r (K (M Ent) o Bool)
-poss :: E (M r) -> ET (M Bool) -> K (M r) (M r) (K (M Ent) (M Bool) Bool)
-poss g p = kunit some <\\> ((kunit p <\\> kunit of_) <//> kkunit g)
--- ------------------------------------------------
 
 
 -- RELATIVE CLAUSES
@@ -524,22 +524,37 @@ that = conj
 {--
 
 "The person who envies boy2 is short"
+eval $ (res $ lower $ up (the' 0) <\> envies </> b2) <\> sb
 -- [good, because the only person who envies boy2 is boy1]
-eval $ (res $ up (the' 0) <\> envies </> b2) <\> sb
 
 "The person who envies boy3 is short"
+eval $ (res $ lower $ up (the' 0) <\> envies </> b3) <\> sb
 -- [failure, because both boy2 and boy1 envy boy3]
-eval $ (res $ up (the' 0) <\> envies </> b3) <\> sb
 
 "The tallest person who envies b4 is short"
+eval $ (res $ lower $ up (the 0 $ tallest 0) <\> envies </> b4) <\> sb
 -- [good, boy3 is the (unique) tallest person who envies boy4, and he's short"
-eval $ (res $ up (the 0 $ tallest 0) <\> envies </> b4) <\> sb
 
 "The tallest person who likes b4 is tall"
+eval $ (res $ lower $ up (the 0 $ tallest 0) <\> likes </> b4) <\> tb
 -- [failure, because both boy4 and girl4 like boy4, and are equally tall]
-eval $ (res $ up (the 0 $ tallest 0) <\> likes </> b4) <\> tb
 
-eval $ (res $ up some <\> envies </> res (up some <\> sb)) <\> sb
+"The girl who likes the person who envies b2 is short"
+eval $ (res $ lower $ up (the' 1) <\> girl <|> likes </> (res $ lower $ up (the' 0) <\> envies </> b2)) <\> sg
+-- [absolute reading: good, since both descriptions are absolutely unique]
+
+
+"The one who envies the one who envies b3 is short"
+eval $ (res $ lower $ up (the' 1) <\> envies </> (lower $ up (the' 0) <\> envies </> b3)) <\> sb
+-- [relative reading: good; even though there are two people that envy b3,
+-- only one of those people is himself envied, so there's only one *pair* of
+-- refs that can satisfy the two descriptions, and thus uniqueness checks out]
+
+"The one who envies the one who envies b4 is short"
+eval $ (res $ lower $ up (the' 1) <\> envies </> (lower $ up (the' 0) <\> envies </> b4)) <\> sb
+-- [relative reading: failure; there is no unique member of the set of people
+-- who envy b4, even when that set is restricted to those that are themselves
+-- envied
 
 --}
 
