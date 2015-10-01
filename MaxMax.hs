@@ -64,12 +64,14 @@ maxB :: Var -> Update -> Update
 maxB x body = \g h -> g `pos` h  &&  g `neg` h
   where pos = switch x `conj` body
         neg g h = not $ any (\h' -> h x `propSub` h' x  &&  g `pos` h') funcs
+        -- neg g h = all (\h' -> h' x `sub` h x  ||  not (g `pos` h')) funcs
 
 saw :: Var -> Var -> Update
 x `saw` y = \g h ->
   let Ent xs = h x
       Ent ys = h y
-      saw' = [("J", "J"), ("M", "M"), ("B", "B")]
+      -- saw' = [("J", "J"), ("M", "M"), ("B", "B")]
+      saw' = [("J", "J"), ("J", "M"), ("J", "B"), ("M", "B")]
   in
       g == h  &&
       h x `sub` Ent [d | (d,e) <- saw', e `elem` ys]  &&
@@ -128,3 +130,14 @@ senMaxMaxVU = maxB V (maxB U senSaw)
 -- 
 -- outs senMaxMaxVU 0
 -- 48: [u := J+M+B, v := J+M+B]
+
+test1 :: Update
+test1 g h = none (\j -> h U `propSub` j U && some (\k -> switch U g k && switch V k j && saw U V j j && none (\j' -> j V `propSub` j' V && switch V k j' && saw U V j' j')))
+   where none = not . some
+         some = flip any funcs
+
+test2 :: Update
+test2 g h = every (\j -> every (\k -> not (h U `propSub` j U && switch U g k && switch V k j && saw U V j j) || some (\j' -> j V `propSub` j' V && switch V k j' && saw U V j' j')))
+   where every = flip all funcs
+         none = not . some
+         some = flip any funcs
