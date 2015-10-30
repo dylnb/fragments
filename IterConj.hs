@@ -44,28 +44,34 @@ instance (Monad m, Fusable a) => Fusable (m a) where
 -- individuals
 
 -- 'diff' and 'longr' target specific ranges of the stack
-_diff, _longr :: (Ent -> Bool) -> D ((Ent -> Bool) -> Ent -> Bool)
+_diff, _longr, _sme :: (Ent -> Bool) -> D ((Ent -> Bool) -> Ent -> Bool)
 _diff comps = do s <- get
                  let s' = filter comps s
                  unit $ \p x -> p x && x `notElem` s'
+_sme comps = do s <- get
+                let s' = filter comps s
+                unit $ \p x -> p x && (x `elem` s' || null s')
 
 _longr comps = do s <- get
                   unit $ \p x -> let s' = filter (fuse comps p) s in
                                  p x && (null s' || x > maximum s')
 
-diff, longr :: (Ent -> Bool) -> K r ((Ent -> Bool) -> Ent -> Bool)
+diff, longr, sme :: (Ent -> Bool) -> K r ((Ent -> Bool) -> Ent -> Bool)
 diff comps = lift (_diff comps)
 longr comps = lift (_longr comps)
+sme comps = lift (_sme comps)
 
 -- 'different' and 'longer' are convenience versions of 'diff'and 'longr' that
 -- target the entire stack
-_different, _longer :: D ((Ent -> Bool) -> Ent -> Bool)
+_different, _longer, _same :: D ((Ent -> Bool) -> Ent -> Bool)
 _different = _diff (const True)
 _longer    = _longr (const True)
+_same      = _sme (const True)
 
-different, longer :: K r ((Ent -> Bool) -> Ent -> Bool)
+different, longer, same :: K r ((Ent -> Bool) -> Ent -> Bool)
 different = lift _different
 longer    = lift _longer
+same      = lift _same
 -- ------------------------------------------------
 
 
@@ -82,7 +88,7 @@ bottle p s = do x <- domAtoms
                 guard $ any fst (run s $ check x)
                 let dx = mfilter id (check x) --@ \_ -> unit x
                 return dx
-  where check x = lower $ p ~/~ pure x
+  where check x = lower $ rap p (return x)
 -- ------------------------------------------------
 
 -- Universals
@@ -245,5 +251,10 @@ eval $ reset $ up $ everyD sb
 eval $ up $ reset $ everyD sb
 -- again, it looks like binding should follow all other operations on DPs
 -- ------------------------------------------------
+
+-- AoCs in restrictors
+-- ------------------------------------------------
+eval $ lap (up $ everyD sb) (rap envies (up $ some (rap (sme (\(Atom (_,i)) -> i > 3)) tb)))
+eval $ lap (up $ everyD (rap envies (up $ some (rap (sme tll) tb)))) (rap envies (pro 20))
 
 -}
