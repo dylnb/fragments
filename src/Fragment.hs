@@ -57,8 +57,8 @@ tallest n = mapStateT $ last . groupSortOn ((!!n) . snd)
 
 -- ------------------------------------------------
 
-conj :: TTT (D r)
-conj = return (&&)
+conj :: Monad m => m Bool -> m Bool -> m Bool
+conj = liftM2 (&&)
 
 disj :: MonadPlus m => m a -> m a -> m a
 disj = mplus
@@ -68,19 +68,6 @@ _neg m = state $ \s -> (not . or $ evalStateT m s, s)
 
 neg :: K (D r) (D r) (D Bool -> D Bool)
 neg = return _neg
-
-
-{-
-
-eval $ (push $ ixlift . lower $ some <\> boy) <\> boy
-
-eval $ (ixlift . llower $ the' 0 <\\> return boy) <\> boy
-
-eval $ (ixlift . llower $ the' 0 <\\> return girl) <\> girl
-
-eval $ push john <\> likes </> (ixlift . llower $ the' 1 <\\> return girl)
-
--}
 
 -- ------------------------------------------------
 

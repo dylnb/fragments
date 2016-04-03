@@ -50,7 +50,7 @@ main = sequence_ $ map (handle $ \(AssertionFailed e) -> putStrLn "presup failur
         ; _fought = flip elem ["JM"]
         ; smBoyLeft = liftM _left (_push $ lower $ some <\> boy)
         ; smGrlLeft = liftM _left (_push $ lower $ some <\> girl)
-        ; sblsgl = liftM2 (&&) smBoyLeft smGrlLeft >>= \x -> state (\s -> (x, s++[s!!0 ++ s!!1]))
+        ; sblsgl = conj smBoyLeft smGrlLeft >>= \x -> state (\s -> (x, s++[s!!0 ++ s!!1]))
         }
      in who (liftM _fought $ _prn 2) sblsgl
  
@@ -68,7 +68,7 @@ main = sequence_ $ map (handle $ \(AssertionFailed e) -> putStrLn "presup failur
         ; _fought = flip elem ["JM"]
         ; thBoyLeft = iliftM (liftM _left) $ llower1 $ the' 0 <\\> ireturn boy
         ; thGrlLeft = iliftM (liftM _left) $ llower1 $ the' 1 <\\> ireturn girl
-        ; tbltgl = iliftM (>>= \x -> state $ \s -> (x, s++[s!!0 ++ s!!1])) $ iliftM2 (liftM2 (&&)) thBoyLeft thGrlLeft
+        ; tbltgl = iliftM (>>= \x -> state $ \s -> (x, s++[s!!0 ++ s!!1])) $ iliftM2 conj thBoyLeft thGrlLeft
         }
      in ireturn (who (liftM _fought $ _prn 2)) </> tbltgl
   ]
