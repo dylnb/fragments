@@ -22,7 +22,9 @@
   \floatsetup[subfigure]{style=Plaintop}
   \captionsetup[subfigure]{labelformat=parens,labelsep=space,justification=raggedright}
 
-\usetikzlibrary{shapes.geometric, chains}
+\usetikzlibrary{decorations.pathreplacing,calc}
+\newcommand{\tikzmark}[1]{\tikz[overlay,remember picture] \node (#1) {};}
+\newcommand{\ntikzmark}[2]{#2\thinspace\tikz[overlay,remember picture,baseline=(#1.base)]{\node[inner sep=0pt] (#1) {};}}
 
 \newenvironment{example}{\ex}{\xe\ignorespacesafterend}
 \newenvironment{pexample}{\pex}{\xe\ignorespacesafterend}
@@ -71,42 +73,42 @@
 % \listfiles
 
 
-\makeatletter
-\def\forest@includeexternal@check#1{%
-  \tikzsetnextfilename{#1}%
-  \IfFileExists{%
-    \tikzexternal@filenameprefix/#1%
-  }{%
-    \tikzexternal@file@isuptodatetrue%
-  }{%
-    \tikzexternal@file@isuptodatefalse%
-  }%
-}
-\makeatother
+% \makeatletter
+% \def\forest@includeexternal@check#1{%
+%   \tikzsetnextfilename{#1}%
+%   \IfFileExists{%
+%     \tikzexternal@filenameprefix/#1%
+%   }{%
+%     \tikzexternal@file@isuptodatetrue%
+%   }{%
+%     \tikzexternal@file@isuptodatefalse%
+%   }%
+% }
+% \makeatother
 
-\tikzexternalize%
-\tikzsetexternalprefix{figures/}
-\tikzset{%
-  external/system call={%
-    pdflatex \tikzexternalcheckshellescape
-    -interaction=nonstopmode -jobname "\image" "\texsource"
-  }
-}
+% \tikzexternalize%
+% \tikzsetexternalprefix{figures/}
+% \tikzset{%
+%   external/system call={%
+%     pdflatex \tikzexternalcheckshellescape
+%     -interaction=nonstopmode -jobname "\image" "\texsource"
+%   }
+% }
 
 \newcommand{\bigtup}[1]{\stretchleftright[600]{\langle}{#1}{\rangle}}
 
-\makeatletter
-\def\moverlay{\mathpalette\mov@rlay}
-\def\mov@rlay#1#2{\leavevmode\vtop{%
-   \baselineskip\z@skip \lineskiplimit-\maxdimen
-   \ialign{\hfil$\m@th#1##$\hfil\cr#2\crcr}}}
-\newcommand{\charfusion}[3][\mathord]{
-    #1{\ifx#1\mathop\vphantom{#2}\fi
-        \mathpalette\mov@rlay{#2\cr#3}
-      }
-    \ifx#1\mathop\expandafter\displaylimits\fi}
-\makeatother
-\newcommand{\capref}[1]{\charfusion[\mathbin]{\mathlarger{\cap}}{{\scriptscriptstyle #1}}}
+% \makeatletter
+% \def\moverlay{\mathpalette\mov@rlay}
+% \def\mov@rlay#1#2{\leavevmode\vtop{%
+%    \baselineskip\z@skip \lineskiplimit-\maxdimen
+%    \ialign{\hfil$\m@th#1##$\hfil\cr#2\crcr}}}
+% \newcommand{\charfusion}[3][\mathord]{
+%     #1{\ifx#1\mathop\vphantom{#2}\fi
+%         \mathpalette\mov@rlay{#2\cr#3}
+%       }
+%     \ifx#1\mathop\expandafter\displaylimits\fi}
+% \makeatother
+% \newcommand{\capref}[1]{\charfusion[\mathbin]{\mathlarger{\cap}}{{\scriptscriptstyle #1}}}
 
 % \tikzset{external/force remake}
 
@@ -139,8 +141,8 @@
         $\mtype{D}{\alpha} \equiv \sigma\sto \set{\typepair{\alpha}{\sigma}}$,
         the type of updates corresponding to constituents of type $\alpha$.
       \item
-        $\mtype{K}{\alpha} \equiv \p{\alpha\sto \mtype{D}{t}}\sto
-        \mtype{D}{t}$, the type of generalized quantifiers with base type
+        $\mtype{K}{\alpha}^{\rho} \equiv \p{\alpha\sto \mtype{D}{\rho}}\sto
+        \mtype{D}{\rho}$, the type of generalized quantifiers with base type
         $\alpha$ and return type $\mtype{D}{t}$.
       \item
         $\mtype{F}{\alpha} \equiv \mtype{D}{\alpha}\sto \mtype{D}{\alpha}$,
@@ -295,8 +297,6 @@ $};
 
 \section{Fragment}
 
-\begin{tikzpicture} % Definite Fragment
-\node{%
 \begin{tabular}[t]{@{}lll@{}}
   \textit{Item} & \textit{Type} & \textit{Denotation} \\ \midrule
   %
@@ -312,7 +312,7 @@ $};
   fought & $e\sto t$ &
   $\cn{fought}$ \\[0.5em]
   %
-  $\some$ & $\p{e\sto\mtype{D}{t}}\sto \mtype{D}{t}$ &
+  $\some$ & $\p{e\sto\mtype{D}{t}}\sto \mtype{D}{e}$ &
   $
   \l cg\dt
   \set{%
@@ -322,34 +322,36 @@ $};
   }
   $ \\[0.5em]
   %
-  $\textbf{the}_u$ & $\mtype{K}{\p{e\sto \mtype{D}{t}}\sto \mtype{K}{e}}$ &
-  $\l kg \dt \one_u\,\p{k\,\p{\l c\dt \p{\some\,c}^{{\push}u}}}\,g$ \\[0.5em]
+  % \tikzmark{t}
+  $\textbf{the}_u$ & $\mtype{K}{\p{e\sto \mtype{D}{t}}\sto \mtype{D}{e}}^{\rho}$ &
+  $\l kg \dt \one_u\,\p{k\,\p{\l c\dt \p{\some\,c}^{{\push}u}}}\,g$
+  \\[0.5em]
   %
   $\one_u$ & $\mtype{F}{\alpha}$ &
   $
-  \l mg \col \abs{m\,g} = 1 \dt m\,g
-  $,\ \
-  \textsf{where}\
-  $G_u = \set{g\,u \mid \tup{\cdot,g} \in G}$ \\[0.5em]
+  \l mg \col \abs{\p{m\,g}_u} = 1 \dt m\,g
+  $
+  \tikzmark{t}
   %
-  $\textbf{every}_u$ & $\mtype{K}{\p{e\sto \mtype{D}{t}}\sto \mtype{K}{e}}$ &
+  \\[0.5em]
+  $\textbf{every}_u$ & $\mtype{K}{\p{e\sto \mtype{D}{t}}\sto \mtype{D}{e}}^{t}$ &
   $\l kg \dt \All_u\,\p{k\,\p{\l c\dt \p{\some\,c}^{{\push}u}}}\,g$ \\[0.5em]
   %
-  $\All_u$ & $\mtype{F}{\alpha}$ &
+  $\All_u$ & $\mtype{F}{t}$ &
   $
   \l mg\dt
   \set{%
     \tup{%
-      \forall x\col\p{m\,g}_u\dt
-      \emptyset \neq \set{\tup{\tru, g'}\in m\,g \giv g'\,u = x},
+      \forall x\in \p{m\,g}_u\dt
+      \exists \tup{\tru, g'}\in m\,g\dt x = g'\,u,\ 
       g
     }
   }
-  $,\ \
-  \textsf{where}\
-  $G_u = \set{g\,u \mid \tup{\cdot,g} \in G}$ \\[0.5em]
+  $
+  \tikzmark{b}
   %
-  \who & $\mtype{D}{e}\sto \mtype{F}{\alpha}$ &
+  \\[0.5em]
+  \who & $\mtype{D}{t}\sto \mtype{F}{\alpha}$ &
   $
   \l rng \dt
   \set{%
@@ -367,13 +369,21 @@ $};
   $\gap_{u+\nu}$ & $\mtype{D}{e}$ &
   $
   \l g\dt \set{\tup{g\,u \oplus g\,\nu, g}}
-  $ \quad -- split antecedence
+  $ \quad --- split antecedence
 \end{tabular}
-};
+%
+\begin{tikzpicture}[overlay, remember picture]
+  \draw[<->,dotted] ($(t) + (0.1,0.075)$)  -- +(6,0) |-
+    node[pos=0.25,fill=white] {where $G_u = \set{g\,u \mid \tup{\cdot, g} \in G}$}
+    ($(b) + (0.1,0.075)$);
+  % \draw [decoration={brace,amplitude=0.5em},decorate]
+  % let \p1=(t), \p2=(b) in
+  % ({max(\x1,\x2)}, {\y1}) --
+  % node[right=0.6em] {where $G_u = \set{g\,u \mid \tup{\cdot, g} \in G}$} ({max(\x1,\x2)}, {\y2});
 \end{tikzpicture}
 
 
-\subsection{Basic Relatives}
+\subsection{Simple Relative Clauses}
 
 \begin{tikzpicture}
 \node{$
@@ -537,7 +547,7 @@ $};
 $};
 \end{tikzpicture}
 
-\begin{itemize}
+\begin{itemize}[leftmargin=*]
   \item
     entails a unique boy-girl pair that fought
 \end{itemize}
@@ -594,7 +604,7 @@ $};
 $};
 \end{tikzpicture}
 
-\begin{itemize}
+\begin{itemize}[leftmargin=*]
   \item
     entails a unique boy-girl pair that fought
   \item
@@ -610,7 +620,7 @@ $};
 
 
 
-\subsection{Reconstruction}
+\subsection{Reconstructed Relative Clauses}
 
 \subsubsection{Basic Reconstruction}
 
