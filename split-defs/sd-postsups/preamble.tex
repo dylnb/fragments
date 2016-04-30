@@ -33,16 +33,34 @@
 }
 \newcommand{\set}[1]{\SET*{#1}}
 % grand union: \uset{ ... \giv ... } = U{ ... | ... }
-\DeclarePairedDelimiterXPP\USET[1]\bigcup\{\}{}{%
+\DeclarePairedDelimiterXPP\USET[1]{\!\bigcup}\{\}{}{%
   \renewcommand{\giv}{\nonscript\:\delimsize\vert\nonscript\:\mathopen{}}
   #1
 }
 \newcommand{\uset}[1]{\USET*{#1}}
-% pairs: \pair{..}{..} = <.., ..>
-\DeclarePairedDelimiterX\PAIR[1]\langle\rangle{#1}
-\newcommand{\pair}[2]{\PAIR*{#1,\pt #2}}
-\newcommand{\thickpair}[2]{\PAIR*{#1,\ \ #2}}
+% tuples
+\DeclarePairedDelimiterX\TUP[1]\langle\rangle{#1}
+% tuple of arbitrary length
+\makeatletter
+\newcommand{\tup}[1]{%
+  \ensuremath{%
+    \TUP*{\my@tups #1,\relax\noexpand\@eolst}%
+  }%
+}
+\def\my@tups #1,#2\@eolst{%
+  \ifx\relax#2\relax
+    #1%
+  \else
+    #1,\pt \my@tups #2\@eolst%
+  \fi
+}
+\makeatother
+\newcommand{\pair}[2]{\tup{#1, #2}}
+\newcommand{\thickpair}[2]{\TUP*{#1,\ \ #2}}
 \newcommand{\typepair}[2]{#1 \ast #2}
+% verts
+\DeclarePairedDelimiterX\ABS[1]||{#1}
+\newcommand{\abs}[1]{\ABS*{#1}}
 
 %%%%% examples, lists, footnotes, citations %%%%%
 \usepackage[bottom,multiple]{footmisc} % force footnotes to bottom of page
@@ -159,15 +177,40 @@
 \newcommand{\sto}{\mathbin{\shortrightarrow}}
 \newcommand{\must}{\mathlarger{\mathlarger{\Box}}}
 \newcommand{\rest}[2]{#1 \col #2}
+\newcommand{\objl}[1]{`#1'}
+\newcommand{\tru}{\textsf{\bfseries T}}
+\newcommand{\fals}{\textsf{\bfseries F}}
+\newcommand{\ms}[1]{\mathsmaller{#1}}
 
-\newcommand*\phantomas[3][c]{% phantom to width of second arg
+% phantom to width of second argument
+\newcommand*\phantomas[3][c]{%
    \ifmmode
      \makebox[\widthof{$#2$}][#1]{$#3$}%
    \else
      \makebox[\widthof{#2}][#1]{#3}%
    \fi
 }
-\newcommand{\objl}[1]{`#1'}
+% dots to break sections in handouts, etc
+\newcommand{\dotbreak}[1][]{%
+  % \vspace{0.5em}\dotfill\hspace{0.5\textwidth} \\ \textsc{#1}\vspace{0.5em}
+  \ifthenelse{\equal{#1}{}}{%
+    \vspace{0.5em}\dotfill\vspace{0.5em}
+  }{%
+    \vspace{0.5em}\dotfill\hspace{0.5\textwidth} \\ \textsc{#1}\vspace{0.5em}
+  }
+}
+% two-column minipage, with widths controlled by optional param
+\newenvironment{minisplit}[1][0.5]{%
+  \newcommand{\splitmini}{%
+    \end{minipage}%
+    \begin{minipage}[t]{\dimexpr\textwidth-#1\textwidth\relax}%
+  }
+  \noindent\ignorespaces%
+  \begin{minipage}[t]{#1\textwidth}%
+}{%
+  \end{minipage}%
+  \ignorespacesafterend%
+}
 
 %%% judgment diacritics
 \newcommand{\att}{${}^{\boldsymbol\gamma}$}
@@ -186,66 +229,57 @@
 \newcommand{\upar}{\uparrow}
 \newcommand{\reset}{\downupharpoons}
 \newcommand{\hole}{[\,]}
-\newcommand{\fsl}{\,/\,}
-\newcommand{\bsl}{\,\backslash\,}
-\newcommand{\msl}{\,|\,}
-\newcommand{\FSL}[1]{\ \stretchrel[600]{/\ }{#1}}
-\newcommand{\BSL}[1]{\ \stretchrel[600]{\backslash\ }{#1}}
-\newcommand{\MSL}[1]{\ \stretchrel[600]{|\ }{#1}}
+\newcommand{\fsl}{\sslash}
+\newcommand{\bsl}{\bbslash}
+\newcommand{\msl}{\,\|\,}
+\newcommand{\FSL}[1]{\ \stretchrel[600]{\ \fsl\ }{#1}}
+\newcommand{\BSL}[1]{\ \stretchrel[600]{\ \bsl\ }{#1}}
+\newcommand{\MSL}[1]{\ \stretchrel[600]{\ \msl\ }{#1}}
 
-% bipartite 2-story tower
-\newcommand{\bitt}[2]{%
-  \ensuremath{%
-    \mathinner{%
-      \begin{tabular}[c]{@{}c@{}}
-        {\ensuremath{#1}}\\
-        \hline
-        {\ensuremath{#2}}\\
-      \end{tabular}
-    }
-  }
+\makeatletter
+\newcommand{\tower}[2][\my@btows]{%
+  \ensuremath{\mathinner{%
+      \begin{tabular}[c]{@{}>{$\displaystyle}c<{$}@{}}%
+        #1 #2,\relax\noexpand\@eolst%
+      \end{tabular}%
+  }}%
 }
-% bipartite 3-story tower
-\newcommand{\bittt}[3]{%
-  \ensuremath{%
-    \mathinner{%
-      \begin{tabular}[c]{@{}c@{}}
-        {\ensuremath{#1}}\\
-        \hline
-        {\ensuremath{#2}}\\
-        \hline
-        {\ensuremath{#3}}\\
-      \end{tabular}
-    }
-  }
+\def\my@ttows #1,#2,#3\@eolst{%
+  \ifx\relax#3\relax
+    \strut\ensuremath{#1}\\
+  \else
+    \strut\ensuremath{#1}\ \hfil\vrule\hfil\ \ensuremath{#2}\\
+    \hline
+    \my@ttows #3\@eolst%
+  \fi
 }
-% bipartite 4-story tower
-\newcommand{\bitttt}[4]{%
-  \ensuremath{%
-    \mathinner{%
-      \begin{tabular}[c]{@{}c@{}}
-        {\ensuremath{#1}}\\
-        \hline
-        {\ensuremath{#2}}\\
-        \hline
-        {\ensuremath{#3}}\\
-        \hline
-        {\ensuremath{#4}}\\
-      \end{tabular}
-    }
-  }
+\def\my@btows #1,#2\@eolst{%
+  \ifx\relax#2\relax
+    \ensuremath{#1}%
+  \else
+    \ensuremath{#1}\\\hline%
+    \my@btows #2\@eolst%
+  \fi
 }
+% tripartite tower of aribitrary depth
+\newcommand{\ttower}[1]{\tower[\my@ttows]{#1}}
+% bipartite tower of arbitrary depth
+\newcommand{\btower}[1]{\tower{#1}}
+\makeatother
+
+\newcommand{\bitt}[2]{\btower{#1, #2}}
+\newcommand{\bittt}[3]{\btower{#1, #2, #3}}
+\newcommand{\bitttt}[4]{\btower{#1, #2, #3, #4}}
+
 % tripartite 2-story tower
-\newcommand\tritt[3]{%
-  \ensuremath{%
-    \mathinner{
+\newcommand{\tritt}[3]{%
+  \ensuremath{\mathinner{%
       \begin{tabular}[c]{@{ }c@{ }}
         \strut\ensuremath{#1}\ \hfil\vrule\hfil\ \ensuremath{#2}\\
         \hline
         \strut\ensuremath{#3}\\
       \end{tabular}
-    }
-  }
+  }}
 }
 
 
@@ -255,65 +289,3 @@
 %%% tikz (for matrices)
 \usepackage{tikz}
 \usetikzlibrary{calc}
-
-
-%%%%% borrowed shapes from other math libraries %%%%%
-
-%%% corners, bigplus, harpoons from mathabx w/o loading the whole font
-% corners
-\DeclareFontFamily{U}{mathb}{}
-\DeclareFontShape{U}{mathb}{m}{n}{%
-      <5> <6> <7> <8> <9> <10> gen * mathb
-      <10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12 }{}
-\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
-\DeclareMathSymbol{\lcorners}{4}{mathb}{"76}% name to be checked
-\DeclareMathSymbol{\rcorners}{5}{mathb}{"77}% name to be checked
-\DeclareMathSymbol{\acorner}{4}{mathb}{"78}% name to be checked
-\DeclareMathSymbol{\bcorner}{5}{mathb}{"79}% name to be checked
-\DeclareMathSymbol{\ccorner}{4}{mathb}{"7A}% name to be checked
-\DeclareMathSymbol{\dcorner}{5}{mathb}{"7B}% name to be checked
-% bigplus
-\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
-\DeclareFontShape{U}{mathx}{m}{n}{%
-    <5> <6> <7> <8> <9> <10>
-    <10.95> <12> <14.4> <17.28> <20.74> <24.88>
-    mathx10
-}{}
-\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
-\DeclareMathSymbol{\bigplus}{1}{mathx}{"90}
-% harpoons
-\DeclareFontFamily{U}{matha}{}
-\DeclareFontShape{U}{matha}{m}{n}{%
-  <5> <6> <7> <8> <9> <10> gen * matha
-  <10.95> matha10 <12> <14.4> <17.28> <20.74> <24.88> matha12 }{}
-\DeclareSymbolFont{matha}{U}{matha}{m}{n}
-\DeclareMathSymbol{\downupharpoons}{3}{matha}{"EB}
-
-%%% powerset symbol from mnsymbol
-\DeclareFontFamily{U}{MnSymbolC}{}
-\DeclareSymbolFont{mnsymbols}{U}{MnSymbolC}{m}{n}
-\DeclareFontShape{U}{MnSymbolC}{m}{n}{%
-<-6> MnSymbolC5
-<6-7> MnSymbolC6
-<7-8> MnSymbolC7
-<8-9> MnSymbolC8
-<9-10> MnSymbolC9
-<10-12> MnSymbolC10
-<12-> MnSymbolC12}{}
-\DeclareMathSymbol{\powerset}{\mathop}{mnsymbols}{180}
-
-%%% right triangles from wasysym
-\DeclareFontFamily{U}{wasy}{}
-\DeclareFontShape{U}{wasy}{m}{n}{%
-<-6> wasy5
-<6-7> wasy6
-<7-8> wasy7
-<8-9> wasy8
-<9-10> wasy9
-<10-> wasy10}{}
-\DeclareSymbolFont{wasy}{U}{wasy}{m}{n}
-\DeclareMathSymbol{\RHD}{\mathbin}{wasy}{"11}
-\let\rhd\undefined
-\DeclareMathSymbol\rhd{\mathbin}{wasy}{"03}
-
-%%% harpoons from mathabx
