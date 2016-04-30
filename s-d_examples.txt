@@ -1,0 +1,169 @@
+same-diff examples:
+
+
+*** Basic Examples ***
+
+eval (alex laugh) == True
+
+he 0 laugh [a,b] trivial == True
+
+he 1 smoke [a,b] trivial == False
+
+eval (indef student laugh) == True
+
+eval (every student laugh) == True
+
+eval (every student smoke) == False
+
+eval (alex laugh `conj` he 0 smoke) == True
+
+eval (bill laugh `conj` he 0 smoke) == False
+
+
+
+*** "Every student V-ed the (same) book" ***
+
+eval (every student (\m -> the book (\n -> want n m))) == False
+
+eval (every student (\m -> the book (\n -> receive n m))) == False
+
+eval (every student $ same (\f -> the (f book)) (\m n -> want m n)) == True
+
+eval (every student $ same (\f -> the (f book)) (\m n -> receive m n)) == False
+
+
+
+*** "Every student V-ed a (different) book" ***
+
+eval (every student (\m -> indef book (\n -> want n m))) == True
+
+eval (every student (\m -> indef book (\n -> receive n m))) == True
+
+eval (every student $ different (\f -> indef (f book)) (\m n -> want m n)) == False
+
+eval (every student $ different (\f -> indef (f book)) (\m n -> receive m n)) == True
+
+Throws a runtime error, since stack must have either a sum-individual or two
+  atomic individuals to distribute over
+eval (alex $ different (\f -> indef (f book)) (\m n -> receive m n))
+eval (alex $ same (\f -> the (f book)) (\m n -> receive m n))
+eval (indef student $ different (\f -> indef (f book)) (\m n -> receive m n))
+eval (indef student $ same (\f -> the (f book)) (\m n -> receive m n))
+
+
+
+*** Plurals ***
+
+eval (the (pl student) (\m -> want dubliners m)) == True
+
+eval (the (pl student) $ same (\f -> the (f book)) (\m n -> want m n)) == True
+
+eval (the (pl student) $ same (\f -> the (f book)) (\m n -> receive m n)) == False
+
+eval (oplus [a,b] $ same (\f -> the (f book)) (\m n -> want m n)) == True
+
+eval (oplus [a,b] $ same (\f -> the (f book)) (\m n -> receive m n)) == False
+
+
+No apparatus for bare plurals yet, but if we pretend that plurals can license
+  singular "different"...
+
+eval (the (pl student) $ different (\f -> indef (f book)) (\m n -> want m n)) == False
+
+eval (the (pl student) $ different (\f -> indef (f book)) (\m n -> receive m n)) == True
+
+eval (oplus [a,b] $ different (\f -> indef (f book)) (\m n -> want m n)) == False
+
+eval (oplus [a,b] $ different (\f -> indef (f book)) (\m n -> receive m n)) == True
+
+
+
+*** "No student(s) V-ed the (same) book" ***
+
+eval (no student (\m -> indef book (\n -> want n m))) == False
+
+eval (no student (\m -> indef book (\n -> receive n m))) == False
+
+eval (no student $ same (\f -> the (f book)) (\m n -> want m n))
+Exception: Prelude.(!!): index too large
+
+eval (no student $ different (\f -> indef (f book)) (\m n -> want m n))
+Exception: Prelude.(!!): index too large
+
+eval (no (pl student) $ same (\f -> the (f book)) (\m n -> want m n)) == False
+
+eval (no (pl student) $ same (\f -> the (f book)) (\m n -> receive m n)) == True
+
+eval (no (pl student) $ different (\f -> indef (f book)) (\m n -> want m n)) == True
+
+eval (no (pl student) $ different (\f -> indef (f book)) (\m n -> receive m n)) == False
+
+
+
+
+*** Partitives ***
+
+Have to use "ast" instead of "pl" for the plural partitive object, again
+  because there's no apparatus for bare plurals
+
+eval ((indef . of_p . the $ (pl student)) smoke) == True
+
+
+### "indef of the same" ###
+
+eval (alex (\m -> (indef . of_p . the $ (ast book)) (\n -> want n m))) == True
+
+eval (oplus [a,b] $ same (\f -> indef . of_p . the $ f (ast book)) (\m n -> want m n)) == True
+
+eval (oplus [a,b] $ same (\f -> indef . of_p . the $ f (ast book)) (\m n -> receive m n)) == False
+
+eval (the (pl student) $ same (\f -> indef . of_p . the $ f (ast book)) (\m n -> want m n)) == True
+
+eval (the (pl student) $ same (\f -> indef . of_p . the $ f (ast book)) (\m n -> receive m n)) == False
+
+eval (every student $ same (\f -> indef . of_p . the $ f (ast book)) (\m n -> want m n)) == True
+
+eval (every student $ same (\f -> indef . of_p . the $ f (ast book)) (\m n -> receive m n)) == False
+
+
+### "none of the same" ###
+
+eval (oplus [a,b] $ same (\f -> no . of_p . the $ f (ast book)) (\m n -> want m n)) == False
+
+eval (oplus [a,b] $ same (\f -> no . of_p . the $ f (ast book)) (\m n -> receive m n)) == True
+
+eval (the (pl student) $ same (\f -> no . of_p . the $ f (ast book)) (\m n -> want m n)) == False
+
+eval (the (pl student) $ same (\f -> no . of_p . the $ f (ast book)) (\m n -> receive m n)) == True
+
+eval (every student $ same (\f -> no . of_p . the $ f (ast book)) (\m n -> want m n)) == False
+
+eval (every student $ same (\f -> no . of_p . the $ f (ast book)) (\m n -> receive m n)) == True
+
+
+
+
+*** External Readings ***
+
+eval ((alex $ want dubliners) `conj` (bill $ same (\f -> the (f book)) (\m n -> want m n))) == True
+
+eval ((alex $ receive dubliners) `conj` (bill $ same (\f -> the (f book)) (\m n -> receive m n))) == False
+
+eval ((alex $ want dubliners) `conj` (bill $ different (\f -> indef (f book)) (\m n -> want m n))) == False
+
+eval ((alex $ receive dubliners) `conj` (bill $ different (\f -> indef (f book)) (\m n -> receive m n))) == True
+
+
+"Alex wanted Dubliners. No other student wanted the same book"
+eval ((alex $ want dubliners) `conj` ((no . dynam $ \_ y -> elem y [b,c]) $ same (\f -> the (f book)) (\m n -> want m n))) == False
+
+"Alex received Dubliners. No other student received the same book"
+eval ((alex $ receive dubliners) `conj` ((no . dynam $ \_ y -> elem y [b,c]) $ same (\f -> the (f book)) (\m n -> receive m n))) == True
+
+
+
+*** Problem Sentences ***
+
+eval (no (pl student) (\m -> indef book (\n -> want n m))) == False
+
+eval (no (pl student) (\m -> indef book (\n -> receive n m))) == True
