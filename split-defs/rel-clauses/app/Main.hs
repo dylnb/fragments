@@ -2,15 +2,18 @@ module Main where
 
 import Grammar
 import IxCont
-import Fragment
+import RelClauses
 import Control.Monad.State
 import Control.Monad.Indexed
 import Control.Exception
 
+{-# ANN module "HLint: ignore Use fmap" #-}
+{-# ANN module "HLint: ignore Use head" #-}
+
 main :: IO ()
-main = sequence_ $ map (handle $ \(AssertionFailed e) -> putStrLn "presup failure")
+main = mapM_ (handle $ \(AssertionFailed e) -> putStrLn "presup failure")
   [ putStrLn "-- some boy is a boy"
-  , print $ eval $ (push $ ixlift . lower $ some <\> boy) <\> boy
+  , print $ eval $ push (ixlift . lower $ some <\> boy) <\> boy
 
   , putStrLn "-- the boy is a boy"
   , print $ eval $ (ixlift . llower $ the' 0 <\\> return boy) <\> boy

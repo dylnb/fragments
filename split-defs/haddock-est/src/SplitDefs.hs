@@ -1,4 +1,4 @@
-module Fragment where
+module SplitDefs where
 
 import Grammar
 import Control.Monad.State
@@ -70,15 +70,3 @@ neg :: K (D r) (D r) (D Bool -> D Bool)
 neg = return _neg
 
 -- ------------------------------------------------
-
--- compare with _some above
-who :: D Bool -> D a -> D a
-who rc dp = do x <- dp
-               rc >>= guard
-               return x
-
-_prn :: Int -> D Ent
-_prn n = gets (!!n)
-
-prn :: Int -> E (D r)
-prn n = ixlift $ _prn n
