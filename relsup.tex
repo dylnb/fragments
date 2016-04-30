@@ -1,0 +1,661 @@
+\documentclass[10pt,fleqn]{article}
+
+\input{preamble}
+\usepackage{vwcol}
+\geometry{landscape, margin=0.5in}
+\setlength{\parindent}{0pt}
+\setlength{\mathindent}{0pt}
+\delimitershortfall=-1pt
+\setlist{leftmargin=*}
+
+\newcommand{\M}{\text{\sffamily\bfseries M}}
+\newcommand{\F}{\text{\sffamily\bfseries F}}
+
+\begin{document}
+
+\setlength\abovedisplayskip{0pt}
+\setlength\belowdisplayskip{0pt}
+\setlength\abovedisplayshortskip{0pt}
+\setlength\belowdisplayshortskip{0pt}
+
+
+\begin{minipage}[t]{0.365\textwidth} % Cont Applicators
+\begin{spreadlines}{0pt}
+\begin{align*}
+  m \fsl n
+  &\coloneq
+  \begin{cases}
+    m\,n
+    &\textbf{if}\ m \dblcolon \alpha\sto\beta,\ n \dblcolon \alpha \\
+    \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \fsl x}}}
+    &\textbf{otherwise}
+  \end{cases} \\
+  %
+  m \bsl n
+  &\coloneq
+  \begin{cases}
+    n\,m
+    &\textbf{if}\ n \dblcolon \alpha\sto\beta,\ m \dblcolon \alpha \\
+    \l k \dt m\,\p{\l f \dt n\,\p{\l x \dt k\,\p{f \bsl x}}}
+    &\textbf{otherwise}
+  \end{cases}
+\end{align*}
+\end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.35\textwidth}
+\begin{itemize}
+  \item
+    The usual applicators for left and right continuized FA
+  \item
+    State.Set monad combinators for managing drefs
+  \item
+    A slightly tweaked lower operator to filter out falsity (more like
+    traditional standard dynamic semantics). This is not essential, but makes
+    the bookkeeping a little smoother.
+\end{itemize}
+\end{minipage}
+%
+\hspace{0.35em}
+%
+\begin{minipage}[t]{0.25\textwidth} % State.Set Grammar
+\begin{spreadlines}{0pt}
+\begin{align*}
+  &&
+  \eta\,x &\coloneq
+  \l g \dt \set{\pair{x}{g}} \\
+  %
+  &&
+  m^{\bind} &\coloneq
+  \l kg \dt \uset{k\,x\,g' \giv \pair{x}{g'} \in m\,g} \\
+  %
+  &&
+  m^\dnar &\coloneq
+  m\,\p{\l xs \dt \set{\pair{x}{s} \giv x \neq \cn{F}}} \\
+  %
+  &&
+  x^\upar &\coloneq
+  \p{\eta\,x}^{\bind} = \l k \dt k\,x \\
+  %
+  &&
+  x^\reset &\coloneq
+  \p{x^\dnar}^{\bind}
+\end{align*}
+\end{spreadlines}
+\end{minipage}
+
+
+\dotfill
+
+\begin{minipage}[t]{0.5\textwidth} % Basic Definite Fragment
+\begin{spreadlines}{0pt}
+\begin{align*}
+  \textbf{the}_u &\coloneq
+    \l ckg \col |G_u| = 1 \dt G, \\
+  &\hphantom{{}\coloneq \l ckg \col}
+    \text{where}\ 
+    G = \uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
+  %
+  \textbf{circle} &\coloneq
+  \cn{circ} \\
+  %
+  \textbf{square} &\coloneq
+  \cn{sq} \\
+  %
+  \textbf{in} &\coloneq
+  \cn{in}
+\end{align*}  
+\end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Basic Definite Fragment Notes
+\begin{spreadlines}{0pt}
+\begin{itemize}
+  \item
+    $\textbf{the}_u$ is just $\textbf{a}_u$ plus a uniqueness presupposition.
+    The presupposition restricts what the \emph{set} of outputs is allowed to
+    look like: they need to all agree on the value of $u$
+  \item
+    That means its uniqueness effect is \emph{delayed} until some program
+    containing it is evaluated, (i.e., until its continuation is delimited).
+    This sort of delayed global test on the set of outputs is very much like a
+    postsupposition (Brasoveanu 2012, Henderson 2014), but here it is
+    regulated by continuations, rather than logical subscripts (Charlow 2014)
+\end{itemize}
+\end{spreadlines}
+\end{minipage}
+
+\dotfill
+
+\begin{minipage}[t]{0.5\textwidth} % Basic Nested Definite Derivs
+\begin{align*} % Resetting a description
+  \sv{\textrm{the square}}
+  %
+  &\leadsto
+  \p{%
+    \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+    %
+    \BSL{%
+    %
+    \bitt{\hole}{\textbf{square}}
+    }
+  }^{\dnar\,\reset}
+  %
+  \leadsto
+  \p{%
+    \textbf{the}_v\,\p{\l yg \dt \set{\pair{\cn{sq}\,y}{g}}}
+  }^\reset \\
+  %
+  %
+  &\leadsto
+  \p{%
+    \bitt{\l g \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}}{y}
+  }^\reset
+  %
+  \leadsto
+  \bitt{%
+    \l g \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+  }{y}
+\end{align*}
+%
+\vspace{3em}
+%
+\begin{align*} % Absolute Definite Deriv
+  &
+  \sv{\textrm{the circle in the square}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{square}}
+        }
+      }^{\dnar\,\reset} } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \bitt{%
+        \l g \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }{y}
+      } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \textbf{the}_u\,\p{%
+        \l xg \col |G_v| = 1 \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }
+    }{%
+      \cn{circ}\,x \land \cn{in}\,y\,x
+    }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \l g \dt
+        \uset{%
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \giv
+          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+        }
+    }{x}
+  }^\reset \\
+  %
+  %
+  &
+  \bitt{%
+    \l g \col |G'_u| = |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+      }
+  }{x}
+\end{align*}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Absolute Definite Notes
+  \begin{itemize}
+    \item
+      Note that resetting $\sv{\textrm{the square}}$ in the last reduction
+      step here has no effect on its semantic shape, because it's essentially
+      $\sv{\textrm{a square}}$.
+    \item
+      But it does fix the presupposition; For any input $g$, $G$ will be equal
+      to $\set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presup will
+      require all those $g$'s to map $v$ to the same square (which will only
+      be possible if there's exactly one square available to assign $v$ to
+      in the first place).
+  \end{itemize} 
+  %
+  \vspace{2em}
+  %
+  \textbf{Absolute Reading}
+  %
+  \begin{itemize}
+    \item
+      The inner definite is reset, freezing its presupposition as above. When
+      the input assignment $g$ is eventually inserted, we will have $G =
+      \set{\pair{y}{g^{v\mapsto y}} \giv \cn{sq}\,y}$, and the presupposition
+      will guarantee that $g'\,v$ is constant across the outputs.
+    \item
+      As with the inner DP, the host DP's presupposition is fixed when it is
+      reset. This time, we have $G' = \set{\pair{x}{g^{\substack{u\mapsto x\\
+      v\mapsto y}}} \giv \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x}$, where
+      $g$ is whatever the input happens to be. In particular, all the outputs
+      will now need to agree on the value of $u$ in addition to $v$, which
+      will only be possible if there's exactly one circle in the square that
+      all outputs assign to $v$.
+  \end{itemize}
+\end{minipage}
+
+\newpage
+
+\begin{minipage}[t]{0.5\textwidth} % Basic Definite Derivs Cont'd
+\begin{align*} % Relative Reading Deriv
+  &
+  \sv{\textrm{the circle in the square}} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \p{%
+        \bitt{\textbf{the}_v\,\p{\l y \dt \hole}}{y}
+        %
+        \BSL{%
+        %
+        \bitt{\hole}{\textbf{square}}
+        }
+      }^{\dnar} } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{\textbf{the}_u\,\p{\l x \dt \hole}}{x}
+    %
+    \BSL{%
+    %
+    \p{%
+      \bitt{\hole}{\textbf{circle}}
+      %
+      \MSL{%
+      %
+      \bitt{\hole}{\textbf{in}}
+      %
+      \FSL{%
+      %
+      \bitt{%
+        \l g \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }{y}
+      } }
+    } }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \textbf{the}_u\,\p{%
+        \l xg \dt \uset{\hole\,g^{v\mapsto y} \giv \cn{sq}\,y}
+      }
+    }{%
+      \cn{circ}\,x \land \cn{in}\,y\,x
+    }
+  }^{\dnar\,\reset} \\
+  %
+  %
+  &
+  \p{%
+    \bitt{%
+      \l g \dt
+        \uset{%
+          \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+        \giv
+          \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+        }
+    }{x}
+  }^{\reset} \\
+  %
+  %
+  &
+  \bitt{%
+    \l g \col |G_u| = |G_v| = 1 \dt
+      \uset{%
+        \hole\,g^{\substack{u\mapsto x\\ v\mapsto y}}
+      \giv
+        \cn{sq}\,y,\ \cn{circ}\,x,\ \cn{in}\,y\,x
+      }
+  }{x}
+\end{align*}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Relative Definite Comments
+  \textbf{Relative Reading} (cf.\ Haddock, Champollion and Saurland)
+
+  \begin{itemize}
+    \item
+      The only difference here is that we do not reset the inner DP, which
+      staves off its presupposition until more information is accumulated in
+      its scope
+    \item
+      But now when the outer DP is reset, it sets the presuppositions
+      of \emph{both} definites
+    \item
+      For any input $g$, $G =
+      \set{\pair{x}{g^{\substack{u\mapsto x\\ v\mapsto y}}} \giv \cn{sq}\,x,\
+        \cn{circ}\,y,\ \cn{in}\,y\,x}$ is the set out outputs that map $u$
+        onto a circle in some square that it maps to $v$.
+    \item
+      So requiring that there be exactly one such $v$ is tantamount to
+      requiring that there be exactly one square \emph{that has a circle in
+      it} and exactly one circle \emph{in that square}. In other words, there
+      should be exactly one pair $\pair{x}{y}$ in $\cn{circ} \times \cn{sq}$
+      such that $\cn{in}\,y\,x$.
+  \end{itemize}
+\end{minipage}
+
+\dotfill
+
+\begin{minipage}[t]{0.5\textwidth} % Plural Fragment
+\begin{spreadlines}{0pt}
+\begin{align*}
+  \M_u &\coloneq
+  \l G \dt
+    \set{%
+      \pair{\cdot}{g} \in G
+    \giv
+      \neg\exists\pair{\cdot}{g'} \in G \dt g'\,u \sqsupset g\,u
+    } \\
+  %
+  \textbf{the}_u &\coloneq
+    \l ckg \col |G_u| = 1 \dt G, \\
+  &\hphantom{{}\coloneq{}}
+    \text{where}\ 
+    G = \M_u\uset{k\,x\,g' \giv \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}} \\
+  %
+  \textbf{-s} &\coloneq
+  \l Px \dt x \in \set{\mathlarger{\oplus} P' \giv P' \subseteq P}
+\end{align*}  
+\end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Plural Fragment Notes
+\begin{spreadlines}{0pt}
+  \begin{itemize}
+    \item
+      $\textbf{-s}$ is a boilerplate plural morpheme that builds sums from the
+      atoms in its complement.
+    \item
+      $\M_u$ is a kind of maximization operator on outputs (Brasoveanu
+      2012, Charlow 2014). It filters out those assignments in $g \in G$ that
+      are strictly dominated, in the sense that they assign $u$ to a value
+      that is a proper part of something assigned to $u$ by some other $g' \in
+      G$.
+  \end{itemize}
+\end{spreadlines}
+\end{minipage}
+
+\dotfill
+
+Derivations \dots
+
+
+\newpage
+
+\dotfill
+
+\begin{minipage}[t]{0.5\textwidth} % Only Fragment
+% \begin{spreadlines}{0pt}
+\begin{align*}
+  \cn{true} &\coloneq
+  \l G \dt \bigvee\set{\alpha \giv \pair{\alpha}{g} \in G} \\
+  \textbf{only}_u &\coloneq 
+  \l G \col \cn{true}\,G \dt \M_u\,G \\
+  \textbf{the}_u &\coloneq
+  \l \mathcal{M}ckg \dt |G_u| = 1 \dt G, \\
+  &\hphantom{{}\coloneq{}}
+    \text{where}\ 
+    G = \mathcal{M}_u\uset{%
+      k\,x\,g'
+    \giv
+      \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
+    }
+\end{align*}
+% \end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.5\textwidth} % Only Fragment Notes
+\begin{spreadlines}{0pt}
+\begin{itemize}
+  \item
+    $\cn{true}$ is a bog standard dynamic truth predicate: true iff at least
+    one update succeeds.
+  \item
+    Adjectival $\textbf{only}$ is just $\M$ plus a presupposition (cf.\
+    Coppock and Beaver 2012, 2014)!
+  \item
+    So here's the swim move: feed $\textbf{only}$ into $\textbf{the}$, and
+    then let the scope of the exclusivity ride the scope of the determiner.
+    This will immediately predict relative readings for adj $\textbf{only}$.
+\end{itemize}
+\end{spreadlines}
+\end{minipage}
+
+\dotfill
+
+John sold the only cars \\
+
+Anna didn't give the only good talk
+
+\dotfill
+
+
+\begin{minipage}[t]{0.6\textwidth} %
+\begin{spreadlines}{0em}
+\begin{align*}
+  % \M_u^f &=
+  % \lambda G \dt
+  %   \set{%
+  %     \pair{\cn{\cdot}}{g} \in G
+  %   \giv
+  %     \neg\exists\pair{\cdot}{g'} \in G \dt f\,(g\,u)\,(g'\,u)
+  %   } \\
+  % %
+  \M_u^f &=
+  \lambda G \dt
+    \set{%
+      \pair{\cn{\alpha}}{g}
+    \giv
+      \pair{\pair{\cn{\alpha}}{\cdot}}{g} \in G
+      ,\ \, 
+      \cn{truthy}\,\alpha
+      ,\ \, 
+      \neg\exists\pair{\pair{\cdot}{\beta}}{g'} \in G \dt
+        \mathsmaller{\bigvee}\!\beta \land f\,(g\,u)\,(g'\,u)
+    } \\
+  %
+  \textbf{larger} &=
+  \lambda xy \dt \cn{size}\,x < \cn{size}\,y \\
+  %
+  \textbf{est}_u &=
+  \lambda f \dt \M_u^f\\
+  %
+  \textbf{largest}_u &=
+  \textbf{est}_u\,\textbf{larger} =
+  \M_u^\cn{sz} =
+  \lambda G \dt
+    \set{%
+      \pair{\cn{T}}{g}
+    \giv
+      \pair{\cn{T}}{g} \in G
+      \land
+      \neg\exists\pair{\cn{T}}{g'} \in G \dt
+        \cn{size}\,(g\,u) < \cn{size}\,(g'\,u)
+    } \\
+  %
+  \textbf{the}_u &=
+  \lambda\mathcal{M}ckg \col |G'_u| = 1 \dt G',
+  \ \textrm{where} \ 
+  G' = \mathcal{M}\uset{%
+    k\,x\,g'
+  \giv
+    x\in \mathcal{D}_e,\ \pair{\cn{T}}{g'} \in c\,x\,g^{u\mapsto x}
+  }
+\end{align*}
+\end{spreadlines}
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.4\textwidth}
+This is some stuff
+
+\end{minipage}
+
+\dotfill
+
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \bitttt{\hole}{%
+    \cn{j}^\F \star \p{\l j \dt \hole}
+  }{%
+    j^\rhd \star \p{\l x \dt \hole}
+  }{x}
+%
+\FSL{%
+  \bitttt{\hole}{\hole}{\hole}{\cn{drew}}
+}
+%
+\BSL{%
+  \bitttt{%
+    \lambda g \dt
+      \M_u \uset{%
+        \hole\,g^{u\mapsto y}
+      \giv
+        \cn{sq}\,y
+      }
+  }{\hole}{\hole}{y}
+}
+\end{align*}  
+\end{minipage}
+%
+%
+\begin{minipage}[t]{0.4\textwidth}
+stuff
+\end{minipage}
+
+\newpage
+
+\begin{spreadlines}{0pt}
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \mathcal{F}\alpha
+  &\coloneq
+  \sigma \sto \typepair{%
+    \set{\typepair{\alpha}{\sigma}}
+  }{%
+    \set{\typepair{\alpha}{\sigma}}
+  } \\
+  %
+  \eta\,x
+  &\coloneq
+  \l g \dt \pair{\set{\pair{x}{g}}}{\set{\pair{x}{g}}} \\
+  %
+  m \bind f
+  &\coloneq
+  \l g \dt
+    \thickpair{%
+      \uset{\p{f\,x\,g'}_1 \giv \pair{x}{g'} \in \p{m\,g}_1}
+    }{%
+      \uset{\p{f\,x\,g'}_2 \giv \pair{x}{g'} \in \p{m\,g}_2}
+    }
+\end{align*}
+\end{minipage}
+\end{spreadlines}
+
+\dotfill
+
+\begin{minipage}[t]{0.6\textwidth}
+\begin{align*}
+  \textbf{the}
+  &\coloneq
+  \l \mathcal{M}ckg \col |G_u| = 1 \dt G_u,
+  \ \text{where} \ 
+  G = \mathcal{M}\,\uset{%
+    k\,y\,g'
+  \giv
+    \pair{\cn{T}}{g'} \in c\,y\,g^{u\mapsto y}
+  } \\
+  \textbf{only}
+  &\coloneq
+  \l G \col \cn{true}\,G \dt
+    \set{%
+      \pair{\cn{T}}{g} \in G
+    \giv
+      \neg\exists g' \dt \pair{\cn{T}}{g'} \in G \land g'\,u \sqsupset g\,u
+    }
+\end{align*}
+\end{minipage}
+
+
+
+
+\end{document}
