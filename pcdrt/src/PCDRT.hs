@@ -33,21 +33,25 @@ sub, propSub :: [Ent] -> [Ent] -> Bool
 xs `sub` ys = all (`elem` ys) xs
 x `propSub` y = x `sub` y  &&  x /= y
 
--- check whether an update is true at particular inputs/outputs
--- (and print the answer together with displays of those assignments)
-eval :: Update -> [Int] -> [Int] -> [String]
-eval m is js = show (m (map snd gs) (map snd hs)) : trunk trans
-  where (gs, hs) = ([(i, asmnts!!i) | i <- is], [(j, asmnts!!j) | j <- js])
-        trans = (\g h -> g ++ " > " ++ h) <$> (pad gs) <*> (pad hs)
-        pad as = map show as :-  "                        "
+-- check whether an update is true at particular input/output info states
+-- info states passed in indexing the asnmnts powerset
+eval :: Update -> [Int] -> [Int] -> Bool
+eval m is js = m gs hs
+  where (gs, hs) = (map (asmnts!!) is, map (asmnts!!) js)
 
--- run an update at a given input (the ith assigment) and show all possible
--- outputs
-outs :: Update -> [Int] -> IO ()
-outs m is = sequence_ . intersperse (putStrLn "") $ do
-  js <- subsequences (zip [0..] asmnts)
-  guard $ m (map (asmnts!!) is) (map snd js)
-  return $ mapM_ putStrLn $ tail $ eval m is (map fst js)
+-- return the image of an info state (again, coded by index) under an update
+outputs :: Update -> [Int] -> [InfS]
+outputs m is =
+  [map snd js | js <- subsequences (zip [0..] asmnts), eval m is (map fst js)]
+
+-- fancy printer for the possible outputs of an update at a given input
+printOutputs :: Update -> [Int] -> IO ()
+printOutputs m is = sequence_ $
+  do hs <- outputs m is
+     let outStrings = trunk $ (\g h -> g ++ " > " ++ h) <$> (pad gs) <*> (pad hs)
+     [mapM_ putStrLn outStrings, putStrLn ""]
+  where gs = map (asmnts!!) is
+        pad as = map show as :-  "                    " 
 
 ------------------------------------------------------------------------------
 -- Model
@@ -77,18 +81,19 @@ switch1 :: Var -> Asmnt -> Asmnt -> Bool
 switch1 x = \g h -> h `elem` (g `savefor` x)
   where savefor g x = [\y -> if y == x then d else g y | d <- dom]
 
+-- G[x]H
 switch :: Var -> Update
 switch x = \gs hs -> 
   all (\g -> any (\h -> switch1 x g h) hs) gs  &&
   all (\h -> any (\g -> switch1 x g h) gs) hs
 
--- g ; h
+-- left ; right
 conj :: Update -> Update -> Update
-left `conj` right =
-  \gs hs -> any (\ks -> gs `left` ks  &&  ks `right` hs) (subsequences asmnts)
+left `conj` right = \gs hs ->
+  any (\ks -> gs `left` ks  &&  ks `right` hs) (subsequences asmnts)
 
--- single cumulative binary predicate
+-- a single row-wise predicate
 saw :: Var -> Var -> Update
-x `saw` y =
-  \gs hs -> gs == hs && all (\h -> (h x, h y) `elem` saw') hs
+x `saw` y = \gs hs ->
+  gs == hs && all (\h -> (h x, h y) `elem` saw') hs
 
