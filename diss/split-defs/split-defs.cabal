@@ -1,12 +1,12 @@
-name:                rel-clauses
+name:                split-defs
 version:             0.1.0.0
 synopsis:            Initial project template from stack
 description:         Please see README.md
-homepage:            http://github.com/dylnb/fragments
+homepage:            http://github.com/dylnb/fragments/diss/split-defs
 license:             BSD3
 author:              Dylan Bumford
-maintainer:          dbumford@gmail.com
-copyright:           2016 Dylan Bumford
+maintainer:          dbumford@ucla.edu
+copyright:           2017 Dylan Bumford
 category:            Web
 build-type:          Simple
 -- extra-source-files:
@@ -14,26 +14,21 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     RelClauses
+  exposed-modules:     SplitDefs
+                     , Grammar
   build-depends:       base >= 4.7 && < 5
                      , mtl
                      , extra
                      , indexed
-                     , haddock-est
   default-language:    Haskell2010
 
-executable rel-clauses-exe
+executable split-defs-exe
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base
-                     , rel-clauses
+                     , split-defs
                      , mtl
                      , extra
                      , indexed
-                     , haddock-est
   default-language:    Haskell2010
-
-source-repository head
-  type:     git
-  location: https://github.com/dylnb/fragments
