@@ -11,24 +11,31 @@ import Data.List.Extra (allSame, groupSortOn)
 -- Individuals ------------------------------------
 
 domain :: [E]
-domain = ["John", "Mary", "Bill", "Thumper", "Bugs", "H1", "H2"]
+domain = [john', mary', bill', thumper', bugs', h1', h2']
+john' = "John"
+mary' = "Mary"
+bill' = "Bill"
+thumper' = "Thumper"
+bugs' = "Bugs"
+h1' = "H1"
+h2' = "H2"
 
--- One-place properties ---------------------------
+-- Properties -------------------------------------
 
 predDomain :: [[E]]
 predDomain = [boy', girl', rabbit', hat', brown']
-boy' = ["John", "Bill"]
-girl' = ["Mary"]
-rabbit' = ["Thumper", "Bugs"]
-hat' = ["H1", "H2"]
-brown' = ["Thumper"]
+boy' = [john', bill']
+girl' = [mary']
+rabbit' = [thumper', bugs']
+hat' = [h1', h2']
+brown' = [thumper']
 
--- Two-place properties ---------------------------
+-- Relations -------------------------------------
 
 relDomain :: [[(E,E)]]
 relDomain = [likes', inside']
-likes' = [("J","B"), ("J","M"), ("B","M")]
-inside' = [("Bugs", "H1")]
+likes' = [(john', bill'), (john', mary'), (bill', mary')]
+inside' = [(bugs', h1')]
 
 ---------------------------------------------------
 -- Language ---------------------------------------
@@ -39,12 +46,12 @@ inside' = [("Bugs", "H1")]
 john, mary, bill, thumper, bugs, h1, h2 :: E
 [john, mary, bill, thumper, bugs, h1, h2] = domain
 
--- Predicates -------------------------------------
+-- One-place predicates ---------------------------
 
 boy, girl, rabbit, hat, brown :: E -> T
 [boy, girl, rabbit, hat, brown] = map (\xs x -> x `elem` xs) predDomain
 
--- Relations --------------------------------------
+-- Two-place predicates ---------------------------
 
 likes, inside :: E -> E -> T
 [likes, inside] = map (\rel x y -> (y,x) `elem` rel) relDomain

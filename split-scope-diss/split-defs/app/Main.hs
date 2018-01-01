@@ -78,7 +78,7 @@ main = do
       in print sen
 
       -- should be true
-    , putStrLn "\n-- john  likes the girl"
+    , putStrLn "\n-- john likes the girl"
     , let thegirl :: K (D r) (D r) E
           thegirl = reset $ ilowr (the' 0 ~\~ uu girl)
           sen :: [(T, Stack)]
