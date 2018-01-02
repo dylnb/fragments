@@ -58,7 +58,7 @@ main = do
       -- should be true
     , putStrLn "\n-- some hat is a hat"
     , let sen :: [(T, Stack)]
-          sen = evl $ (lowr $ some ~\~ u hat) ~\~ u hat
+          sen = evl $ lowr (some ~\~ u hat) ~\~ u hat
       in print sen
 
       -- should be uniqueness failure
@@ -110,26 +110,26 @@ main = do
       in print sen
 
       -- should be H2
-    , putStrLn "\n-- the tallest hat"
-    , let tth :: [(E, Stack)]
-          tth = evl $ ilowr (the 0 (tallest 0) ~\~ uu hat)
-      in print tth
+    , putStrLn "\n-- the biggest hat"
+    , let tbh :: [(E, Stack)]
+          tbh = evl $ ilowr (the 0 (biggest 0) ~\~ uu hat)
+      in print tbh
 
       -- should be [] (because there are no rabbits in H2)
-    , putStrLn "\n-- the rabbit in the tallest hat (absolute)"
-    , let tth :: K (D r') (D r') (K (D r) (D r) E)
-          tth = u $ reset $ ilowr (the 0 (tallest 0) ~\~ uu hat)
-          tritth :: [(E, Stack)]
-          tritth = evl $ ilowr (the' 1 ~\~ (uu rabbit ~|~ (uu inside ~/~ tth)))
-      in print tritth
+    , putStrLn "\n-- the rabbit in the biggest hat (absolute)"
+    , let tbh :: K (D r') (D r') (K (D r) (D r) E)
+          tbh = u $ reset $ ilowr (the 0 (biggest 0) ~\~ uu hat)
+          tritbh :: [(E, Stack)]
+          tritbh = evl $ ilowr (the' 1 ~\~ (uu rabbit ~|~ (uu inside ~/~ tbh)))
+      in print tritbh
 
     -- should be bugs (with H1 on the stack)
-    , putStrLn "\n-- the rabbit in the tallest hat (relative)"
+    , putStrLn "\n-- the rabbit in the biggest hat (relative)"
     , let ttr :: K (D r') (D r') (K (D r) (D r) E)
-          ttr = ilowr (the 0 (tallest 0) ~\~ uu hat)
-          tritth :: [(E, Stack)]
-          tritth = evl $ ilowr (the' 1 ~\~ (uu rabbit ~|~ (uu inside ~/~ ttr)))
-      in print tritth
+          ttr = ilowr (the 0 (biggest 0) ~\~ uu hat)
+          tritbh :: [(E, Stack)]
+          tritbh = evl $ ilowr (the' 1 ~\~ (uu rabbit ~|~ (uu inside ~/~ ttr)))
+      in print tritbh
 
     ]
 

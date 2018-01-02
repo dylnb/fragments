@@ -74,9 +74,9 @@ the' n = the n id
 unique :: Int -> F a
 unique n = mapStateT exactlyOne
   where exactlyOne xs
-          | null xs                      = error "existence failure"
+          | null xs                      = errorWithoutStackTrace "existence failure"
           | allSame [s!!n | (_,s) <- xs] = xs
-          | otherwise                    = error "uniqueness failure"
+          | otherwise                    = errorWithoutStackTrace "uniqueness failure"
 
-tallest :: Int -> F a
-tallest n = mapStateT $ last . groupSortOn ((!!n) . snd)
+biggest :: Int -> F a
+biggest n = mapStateT $ last . groupSortOn ((!!n) . snd)
